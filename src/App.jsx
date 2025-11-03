@@ -15,13 +15,24 @@ const SheFixes = () => {
   // 认证状态
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [authMode, setAuthMode] = useState('login'); // 'login', 'register-user', or 'register-technician'
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // 登录/注册数据
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
     email: '', password: '', name: '', phone: '', city: '', preference: 'women-only'
+  });
+
+  // 技师注册数据
+  const [technicianData, setTechnicianData] = useState({
+    email: '', password: '', name: '', phone: '', city: '',
+    service_categories: [],
+    hourly_rate: '',
+    gender: 'female',
+    bio: '',
+    tools: '',
+    client_preference: 'women-only'
   });
   
   // 订单数据
@@ -124,13 +135,13 @@ const SheFixes = () => {
     }
   };
 
-  // 注册
-  const handleRegister = async (e) => {
+  // 用户注册
+  const handleUserRegister = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    if (!registerData.email || !registerData.password || !registerData.name || 
+    if (!registerData.email || !registerData.password || !registerData.name ||
         !registerData.phone || !registerData.city) {
       setError(region === 'us' ? 'Please fill all fields' : '请填写所有字段');
       setLoading(false);
@@ -144,42 +155,119 @@ const SheFixes = () => {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // 1. 创建 Auth 用户
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: registerData.email,
-        password: registerData.password,
-        options: {
-          data: {
-            name: registerData.name,
-            phone: registerData.phone,
-            city: registerData.city,
-            preference: registerData.preference,
-            region: region
-          }
-        }
+        password: registerData.password
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
-      // 创建用户记录
+      // 2. 在 users 表创建用户记录
       const { error: insertError } = await supabase
         .from('users')
         .insert([{
-          id: data.user.id,
+          id: authData.user.id,
           email: registerData.email,
           name: registerData.name,
           phone: registerData.phone,
           city: registerData.city,
           preference: registerData.preference,
-          region: region
+          region: region,
+          status: 'approved'
         }]);
 
       if (insertError) throw insertError;
 
-      alert(region === 'us' 
-        ? 'Account created! Please check your email to verify.' 
-        : '账号创建成功！请查看邮箱验证。');
-      
+      alert(region === 'us'
+        ? 'Account created successfully!'
+        : '账号创建成功！');
+
       setAuthMode('login');
+    } catch (error) {
+      setError(error.message || (region === 'us' ? 'Registration failed' : '注册失败'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 技师注册
+  const handleTechnicianRegister = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    if (!technicianData.email || !technicianData.password || !technicianData.name ||
+        !technicianData.phone || !technicianData.city || !technicianData.hourly_rate ||
+        technicianData.service_categories.length === 0) {
+      setError(region === 'us' ? 'Please fill all required fields' : '请填写所有必填字段');
+      setLoading(false);
+      return;
+    }
+
+    if (technicianData.password.length < 6) {
+      setError(region === 'us' ? 'Password must be at least 6 characters' : '密码至少6个字符');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // 1. 创建 Auth 用户
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: technicianData.email,
+        password: technicianData.password
+      });
+
+      if (authError) throw authError;
+
+      // 2. 在 users 表创建用户记录
+      const { error: userError } = await supabase
+        .from('users')
+        .insert([{
+          id: authData.user.id,
+          email: technicianData.email,
+          name: technicianData.name,
+          phone: technicianData.phone,
+          city: technicianData.city,
+          region: region,
+          status: 'pending'  // 技师需要审核
+        }]);
+
+      if (userError) throw userError;
+
+      // 3. 在 technicians 表创建技师记录
+      const { error: techError } = await supabase
+        .from('technicians')
+        .insert([{
+          user_id: authData.user.id,
+          name: technicianData.name,
+          email: technicianData.email,
+          phone: technicianData.phone,
+          service_area: [technicianData.city],
+          service_categories: technicianData.service_categories,
+          hourly_rate: parseFloat(technicianData.hourly_rate),
+          client_preference: technicianData.client_preference,
+          gender: technicianData.gender,
+          bio: technicianData.bio || '',
+          tools: technicianData.tools || '',
+          rating: 5.0,
+          jobs_completed: 0,
+          status: 'pending',  // 需要审核
+          region: region
+        }]);
+
+      if (techError) throw techError;
+
+      alert(region === 'us'
+        ? 'Technician account created! Please wait for approval.'
+        : '技师账号创建成功！请等待审核。');
+
+      setAuthMode('login');
+      setTechnicianData({
+        email: '', password: '', name: '', phone: '', city: '',
+        service_categories: [], hourly_rate: '', gender: 'female',
+        bio: '', tools: '', client_preference: 'women-only'
+      });
     } catch (error) {
       setError(error.message || (region === 'us' ? 'Registration failed' : '注册失败'));
     } finally {
@@ -346,9 +434,48 @@ const SheFixes = () => {
     us: {
       nav: { home: 'Home', find: 'Find', dashboard: 'My Orders', login: 'Login', logout: 'Logout', booking: 'Book Service' },
       auth: {
-        login: 'Login', register: 'Register', email: 'Email', password: 'Password',
-        name: 'Name', phone: 'Phone', city: 'City', loginBtn: 'Log In', registerBtn: 'Create Account',
-        noAccount: "Don't have an account?", haveAccount: 'Have an account?', signUp: 'Sign up', signIn: 'Sign in'
+        login: 'Login',
+        registerUser: 'Register as User',
+        registerTech: 'Register as Technician',
+        email: 'Email',
+        password: 'Password',
+        name: 'Full Name',
+        phone: 'Phone Number',
+        city: 'City',
+        loginBtn: 'Log In',
+        registerBtn: 'Create Account',
+        noAccount: "Don't have an account?",
+        haveAccount: 'Have an account?',
+        signUp: 'Sign up',
+        signIn: 'Sign in',
+        // 技师专用字段
+        hourlyRate: 'Hourly Rate ($)',
+        serviceCategories: 'Service Categories',
+        gender: 'Gender',
+        bio: 'Bio / About You',
+        tools: 'Tools You Own',
+        clientPreference: 'Client Preference',
+        selectCategories: 'Select all that apply...',
+        categories: {
+          plumbing: 'Plumbing',
+          electrical: 'Electrical',
+          hvac: 'HVAC',
+          carpentry: 'Carpentry',
+          painting: 'Painting',
+          appliance: 'Appliance Repair',
+          other: 'Other'
+        },
+        genders: {
+          female: 'Female',
+          male: 'Male',
+          nonBinary: 'Non-binary',
+          preferNotToSay: 'Prefer not to say'
+        },
+        preferences: {
+          womenOnly: 'Women Only',
+          anyone: 'Anyone',
+          lgbtqFriendly: 'LGBTQ+ Friendly'
+        }
       },
       dashboard: {
         title: 'My Orders',
@@ -393,9 +520,48 @@ const SheFixes = () => {
     cn: {
       nav: { home: '首页', find: '找技师', dashboard: '我的订单', login: '登录', logout: '退出', booking: '预约服务' },
       auth: {
-        login: '登录', register: '注册', email: '邮箱', password: '密码',
-        name: '姓名', phone: '手机', city: '城市', loginBtn: '登录', registerBtn: '创建账号',
-        noAccount: '还没有账号？', haveAccount: '已有账号？', signUp: '注册', signIn: '登录'
+        login: '登录',
+        registerUser: '注册用户',
+        registerTech: '注册技师',
+        email: '邮箱',
+        password: '密码',
+        name: '姓名',
+        phone: '手机号',
+        city: '城市',
+        loginBtn: '登录',
+        registerBtn: '创建账号',
+        noAccount: '还没有账号？',
+        haveAccount: '已有账号？',
+        signUp: '注册',
+        signIn: '登录',
+        // 技师专用字段
+        hourlyRate: '时薪（元）',
+        serviceCategories: '服务类别',
+        gender: '性别',
+        bio: '个人简介',
+        tools: '拥有工具',
+        clientPreference: '客户偏好',
+        selectCategories: '选择所有适用项...',
+        categories: {
+          plumbing: '水管维修',
+          electrical: '电路维修',
+          hvac: '空调暖气',
+          carpentry: '木工',
+          painting: '油漆粉刷',
+          appliance: '家电维修',
+          other: '其他'
+        },
+        genders: {
+          female: '女',
+          male: '男',
+          nonBinary: '非二元',
+          preferNotToSay: '不愿透露'
+        },
+        preferences: {
+          womenOnly: '仅限女性',
+          anyone: '不限',
+          lgbtqFriendly: 'LGBTQ+友好'
+        }
       },
       dashboard: {
         title: '我的订单',
@@ -618,28 +784,33 @@ const SheFixes = () => {
       {/* 登录/注册页面 */}
       {currentPage === 'auth' && !currentUser && (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center px-4 py-12">
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-2xl">
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold mb-2">SheFixes</h1>
               <p className="text-gray-600">
-                {authMode === 'login' 
+                {authMode === 'login'
                   ? (region === 'us' ? 'Welcome back!' : '欢迎回来！')
                   : (region === 'us' ? 'Join us' : '加入我们')}
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl p-2 mb-6 flex shadow-sm">
+            {/* 三个标签页 */}
+            <div className="bg-white rounded-2xl p-2 mb-6 grid grid-cols-3 gap-2 shadow-sm">
               <button onClick={() => setAuthMode('login')}
-                className={`flex-1 py-3 rounded-xl font-semibold transition ${authMode === 'login' ? 'bg-pink-500 text-white' : 'text-gray-600'}`}>
+                className={`py-3 rounded-xl font-semibold transition ${authMode === 'login' ? 'bg-pink-500 text-white' : 'text-gray-600'}`}>
                 {c.auth.login}
               </button>
-              <button onClick={() => setAuthMode('register')}
-                className={`flex-1 py-3 rounded-xl font-semibold transition ${authMode === 'register' ? 'bg-pink-500 text-white' : 'text-gray-600'}`}>
-                {c.auth.register}
+              <button onClick={() => setAuthMode('register-user')}
+                className={`py-3 rounded-xl font-semibold transition ${authMode === 'register-user' ? 'bg-pink-500 text-white' : 'text-gray-600'}`}>
+                {c.auth.registerUser}
+              </button>
+              <button onClick={() => setAuthMode('register-technician')}
+                className={`py-3 rounded-xl font-semibold transition ${authMode === 'register-technician' ? 'bg-pink-500 text-white' : 'text-gray-600'}`}>
+                {c.auth.registerTech}
               </button>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="bg-white rounded-2xl shadow-xl p-8 max-h-[70vh] overflow-y-auto">
               {error && (
                 <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
                   <AlertCircle className="text-red-500" size={20} />
@@ -647,8 +818,9 @@ const SheFixes = () => {
                 </div>
               )}
 
-              {authMode === 'login' ? (
-                <div className="space-y-4">
+              {/* 登录表单 */}
+              {authMode === 'login' && (
+                <form onSubmit={handleLogin} className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold mb-2">{c.auth.email}</label>
                     <div className="relative">
@@ -656,7 +828,7 @@ const SheFixes = () => {
                       <input type="email" value={loginData.email}
                         onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                         className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
-                        placeholder="your@email.com" />
+                        placeholder="your@email.com" required />
                     </div>
                   </div>
                   <div>
@@ -666,57 +838,186 @@ const SheFixes = () => {
                       <input type={showPassword ? 'text' : 'password'} value={loginData.password}
                         onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                         className="w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
-                        placeholder="••••••••" />
+                        placeholder="••••••••" required />
                       <button type="button" onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
                   </div>
-                  <button onClick={handleLogin} disabled={loading}
+                  <button type="submit" disabled={loading}
                     className={`w-full py-3 rounded-lg font-semibold text-white ${loading ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'}`}>
                     {loading ? '...' : c.auth.loginBtn}
                   </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
+                </form>
+              )}
+
+              {/* 用户注册表单 */}
+              {authMode === 'register-user' && (
+                <form onSubmit={handleUserRegister} className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold mb-2">{c.auth.email}</label>
                     <input type="email" value={registerData.email}
                       onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-2">{c.auth.password}</label>
                     <input type={showPassword ? 'text' : 'password'} value={registerData.password}
                       onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                      placeholder={region === 'us' ? 'At least 6 characters' : '至少6个字符'} required />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-2">{c.auth.name}</label>
                     <input type="text" value={registerData.name}
                       onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold mb-2">{c.auth.phone}</label>
                       <input type="tel" value={registerData.phone}
                         onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold mb-2">{c.auth.city}</label>
                       <input type="text" value={registerData.city}
                         onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
-                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
                     </div>
                   </div>
-                  <button onClick={handleRegister} disabled={loading}
+                  <button type="submit" disabled={loading}
                     className={`w-full py-3 rounded-lg font-semibold text-white ${loading ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'}`}>
                     {loading ? '...' : c.auth.registerBtn}
                   </button>
-                </div>
+                </form>
+              )}
+
+              {/* 技师注册表单 */}
+              {authMode === 'register-technician' && (
+                <form onSubmit={handleTechnicianRegister} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.email}</label>
+                      <input type="email" value={technicianData.email}
+                        onChange={(e) => setTechnicianData({ ...technicianData, email: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.password}</label>
+                      <input type={showPassword ? 'text' : 'password'} value={technicianData.password}
+                        onChange={(e) => setTechnicianData({ ...technicianData, password: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.name}</label>
+                      <input type="text" value={technicianData.name}
+                        onChange={(e) => setTechnicianData({ ...technicianData, name: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.phone}</label>
+                      <input type="tel" value={technicianData.phone}
+                        onChange={(e) => setTechnicianData({ ...technicianData, phone: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.city}</label>
+                      <input type="text" value={technicianData.city}
+                        onChange={(e) => setTechnicianData({ ...technicianData, city: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.hourlyRate}</label>
+                      <input type="number" step="0.01" value={technicianData.hourly_rate}
+                        onChange={(e) => setTechnicianData({ ...technicianData, hourly_rate: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">{c.auth.serviceCategories} *</label>
+                    <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg">
+                      {Object.entries(c.auth.categories).map(([key, label]) => (
+                        <label key={key} className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox"
+                            checked={technicianData.service_categories.includes(key)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setTechnicianData({
+                                  ...technicianData,
+                                  service_categories: [...technicianData.service_categories, key]
+                                });
+                              } else {
+                                setTechnicianData({
+                                  ...technicianData,
+                                  service_categories: technicianData.service_categories.filter(c => c !== key)
+                                });
+                              }
+                            }}
+                            className="w-4 h-4 text-pink-500 rounded" />
+                          <span className="text-sm">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.gender}</label>
+                      <select value={technicianData.gender}
+                        onChange={(e) => setTechnicianData({ ...technicianData, gender: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500">
+                        {Object.entries(c.auth.genders).map(([key, label]) => (
+                          <option key={key} value={key}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.clientPreference}</label>
+                      <select value={technicianData.client_preference}
+                        onChange={(e) => setTechnicianData({ ...technicianData, client_preference: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500">
+                        <option value="women-only">{c.auth.preferences.womenOnly}</option>
+                        <option value="anyone">{c.auth.preferences.anyone}</option>
+                        <option value="lgbtq-friendly">{c.auth.preferences.lgbtqFriendly}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">{c.auth.bio}</label>
+                    <textarea value={technicianData.bio}
+                      onChange={(e) => setTechnicianData({ ...technicianData, bio: e.target.value })}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                      rows="3"
+                      placeholder={region === 'us' ? 'Tell us about yourself...' : '介绍一下自己...'}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">{c.auth.tools}</label>
+                    <textarea value={technicianData.tools}
+                      onChange={(e) => setTechnicianData({ ...technicianData, tools: e.target.value })}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                      rows="2"
+                      placeholder={region === 'us' ? 'List your tools...' : '列出您的工具...'}
+                    />
+                  </div>
+
+                  <button type="submit" disabled={loading}
+                    className={`w-full py-3 rounded-lg font-semibold text-white ${loading ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'}`}>
+                    {loading ? '...' : c.auth.registerBtn}
+                  </button>
+                </form>
               )}
             </div>
           </div>
