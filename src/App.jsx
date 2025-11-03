@@ -516,6 +516,16 @@ const SheFixes = () => {
           carpentry: 'Carpentry',
           painting: 'Painting',
           appliance: 'Appliance Repair',
+          gardening: 'Gardening & Lawn Care',
+          landscaping: 'Landscaping',
+          cleaning: 'House Cleaning',
+          moving: 'Moving & Furniture Assembly',
+          roofing: 'Roofing',
+          flooring: 'Flooring',
+          window_repair: 'Window & Door Repair',
+          gutter_cleaning: 'Gutter Cleaning',
+          auto_repair: 'Auto Repair',
+          pet_care: 'Pet Care',
           other: 'Other'
         },
         genders: {
@@ -554,6 +564,17 @@ const SheFixes = () => {
           hvac: 'HVAC',
           carpentry: 'Carpentry',
           painting: 'Painting',
+          appliance: 'Appliance Repair',
+          gardening: 'Gardening & Lawn Care',
+          landscaping: 'Landscaping',
+          cleaning: 'House Cleaning',
+          moving: 'Moving & Furniture Assembly',
+          roofing: 'Roofing',
+          flooring: 'Flooring',
+          window_repair: 'Window & Door Repair',
+          gutter_cleaning: 'Gutter Cleaning',
+          auto_repair: 'Auto Repair',
+          pet_care: 'Pet Care',
           other: 'Other'
         }
       },
@@ -602,6 +623,16 @@ const SheFixes = () => {
           carpentry: '木工',
           painting: '油漆粉刷',
           appliance: '家电维修',
+          gardening: '园艺与草坪维护',
+          landscaping: '景观美化',
+          cleaning: '家庭清洁',
+          moving: '搬家与家具组装',
+          roofing: '屋顶维修',
+          flooring: '地板维修',
+          window_repair: '门窗维修',
+          gutter_cleaning: '排水沟清洁',
+          auto_repair: '汽车维修',
+          pet_care: '宠物护理',
           other: '其他'
         },
         genders: {
@@ -640,6 +671,17 @@ const SheFixes = () => {
           hvac: '空调暖气',
           carpentry: '木工',
           painting: '油漆粉刷',
+          appliance: '家电维修',
+          gardening: '园艺与草坪维护',
+          landscaping: '景观美化',
+          cleaning: '家庭清洁',
+          moving: '搬家与家具组装',
+          roofing: '屋顶维修',
+          flooring: '地板维修',
+          window_repair: '门窗维修',
+          gutter_cleaning: '排水沟清洁',
+          auto_repair: '汽车维修',
+          pet_care: '宠物护理',
           other: '其他'
         }
       },
@@ -691,26 +733,254 @@ const SheFixes = () => {
 
       {/* 主页 */}
       {currentPage === 'home' && (
-        <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 pt-20 pb-16 px-4">
-          <div className="max-w-6xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
-              {region === 'us' ? 'Fix it. Own it.' : '她修她世界'}
-            </h1>
-            <p className="text-2xl text-gray-700 mb-8">
-              {region === 'us' ? 'Safe repair for women by women' : '为女性打造的安全维修社区'}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button onClick={() => setCurrentPage('find')} className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full font-semibold shadow-lg">
-                {region === 'us' ? 'Find Technician' : '找技师'}
-              </button>
-              {!currentUser && (
-                <button onClick={() => setCurrentPage('auth')} className="bg-white text-pink-500 border-2 border-pink-500 px-8 py-4 rounded-full font-semibold shadow-lg">
-                  {region === 'us' ? 'Register' : '注册'}
+        <>
+          {/* Hero Section */}
+          <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 pt-20 pb-16 px-4">
+            <div className="max-w-6xl mx-auto text-center">
+              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
+                {region === 'us' ? 'Fix it. Own it.' : '她修她世界'}
+              </h1>
+              <p className="text-2xl text-gray-700 mb-8">
+                {region === 'us' ? 'Safe repair for women by women' : '为女性打造的安全维修社区'}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button onClick={() => setCurrentPage('booking')} className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full font-semibold shadow-lg">
+                  {region === 'us' ? 'Book a Service' : '预约服务'}
                 </button>
-              )}
+                {!currentUser && (
+                  <button onClick={() => setCurrentPage('auth')} className="bg-white text-pink-500 border-2 border-pink-500 px-8 py-4 rounded-full font-semibold shadow-lg">
+                    {region === 'us' ? 'Register' : '注册'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Why Choose Us */}
+          <div className="py-16 px-4 bg-white">
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-4xl font-bold text-center mb-12">
+                {region === 'us' ? 'Why Choose SheFixes?' : '为什么选择SheFixes？'}
+              </h2>
+              <div className="grid md:grid-cols-3 gap-8">
+                <div className="text-center p-6">
+                  <div className="bg-pink-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Shield className="text-pink-500" size={40} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">
+                    {region === 'us' ? 'Safe & Trusted' : '安全可信'}
+                  </h3>
+                  <p className="text-gray-600">
+                    {region === 'us'
+                      ? 'All technicians are verified and background-checked for your safety'
+                      : '所有技师均经过身份验证和背景调查，确保您的安全'}
+                  </p>
+                </div>
+                <div className="text-center p-6">
+                  <div className="bg-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Heart className="text-purple-500" size={40} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">
+                    {region === 'us' ? 'Women-Focused' : '女性优先'}
+                  </h3>
+                  <p className="text-gray-600">
+                    {region === 'us'
+                      ? 'Empowering women technicians and providing comfortable service for women clients'
+                      : '赋能女性技师，为女性客户提供舒适的服务体验'}
+                  </p>
+                </div>
+                <div className="text-center p-6">
+                  <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Star className="text-blue-500" size={40} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">
+                    {region === 'us' ? 'Quality Service' : '优质服务'}
+                  </h3>
+                  <p className="text-gray-600">
+                    {region === 'us'
+                      ? 'Professional, skilled technicians with excellent customer reviews'
+                      : '专业熟练的技师，优质的客户评价'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Services Section */}
+          <div className="py-16 px-4 bg-gray-50">
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-4xl font-bold text-center mb-4">
+                {region === 'us' ? 'Our Services' : '我们的服务'}
+              </h2>
+              <p className="text-center text-gray-600 mb-12 text-lg">
+                {region === 'us'
+                  ? 'From home repairs to lawn care, we\'ve got you covered'
+                  : '从家庭维修到园艺护理，我们为您提供全方位服务'}
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {[
+                  { key: 'plumbing', icon: '🔧' },
+                  { key: 'electrical', icon: '⚡' },
+                  { key: 'hvac', icon: '❄️' },
+                  { key: 'carpentry', icon: '🔨' },
+                  { key: 'painting', icon: '🎨' },
+                  { key: 'appliance', icon: '🔌' },
+                  { key: 'gardening', icon: '🌿' },
+                  { key: 'landscaping', icon: '🌳' },
+                  { key: 'cleaning', icon: '🧹' },
+                  { key: 'moving', icon: '📦' },
+                  { key: 'roofing', icon: '🏠' },
+                  { key: 'flooring', icon: '🪵' },
+                  { key: 'window_repair', icon: '🪟' },
+                  { key: 'gutter_cleaning', icon: '🚿' },
+                  { key: 'auto_repair', icon: '🚗' },
+                  { key: 'pet_care', icon: '🐾' },
+                ].map(({ key, icon }) => (
+                  <div
+                    key={key}
+                    onClick={() => {
+                      setBookingForm({ ...bookingForm, service_type: key });
+                      setCurrentPage('booking');
+                    }}
+                    className="bg-white rounded-xl p-6 text-center hover:shadow-lg transition-shadow cursor-pointer group"
+                  >
+                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">{icon}</div>
+                    <h3 className="font-semibold text-sm text-gray-800">
+                      {c.booking.services[key]}
+                    </h3>
+                  </div>
+                ))}
+              </div>
+              <div className="text-center mt-8">
+                <button
+                  onClick={() => setCurrentPage('booking')}
+                  className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 rounded-full font-semibold"
+                >
+                  {region === 'us' ? 'Book Now' : '立即预约'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* How It Works */}
+          <div className="py-16 px-4 bg-white">
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-4xl font-bold text-center mb-12">
+                {region === 'us' ? 'How It Works' : '如何使用'}
+              </h2>
+              <div className="grid md:grid-cols-4 gap-8">
+                <div className="text-center">
+                  <div className="bg-pink-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                    1
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">
+                    {region === 'us' ? 'Book Service' : '预约服务'}
+                  </h3>
+                  <p className="text-gray-600">
+                    {region === 'us'
+                      ? 'Choose your service and tell us what you need'
+                      : '选择服务类型，告诉我们您的需求'}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <div className="bg-pink-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                    2
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">
+                    {region === 'us' ? 'Get Matched' : '匹配技师'}
+                  </h3>
+                  <p className="text-gray-600">
+                    {region === 'us'
+                      ? 'We connect you with qualified technicians'
+                      : '我们为您匹配合适的专业技师'}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <div className="bg-pink-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                    3
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">
+                    {region === 'us' ? 'Schedule Time' : '安排时间'}
+                  </h3>
+                  <p className="text-gray-600">
+                    {region === 'us'
+                      ? 'Confirm appointment time that works for you'
+                      : '确认适合您的服务时间'}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <div className="bg-pink-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                    4
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">
+                    {region === 'us' ? 'Get It Fixed' : '完成服务'}
+                  </h3>
+                  <p className="text-gray-600">
+                    {region === 'us'
+                      ? 'Enjoy quality service and leave a review'
+                      : '享受优质服务并留下评价'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Section */}
+          <div className="py-16 px-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white">
+            <div className="max-w-6xl mx-auto">
+              <div className="grid md:grid-cols-4 gap-8 text-center">
+                <div>
+                  <div className="text-5xl font-bold mb-2">5000+</div>
+                  <p className="text-pink-100">
+                    {region === 'us' ? 'Happy Clients' : '满意客户'}
+                  </p>
+                </div>
+                <div>
+                  <div className="text-5xl font-bold mb-2">500+</div>
+                  <p className="text-pink-100">
+                    {region === 'us' ? 'Verified Technicians' : '认证技师'}
+                  </p>
+                </div>
+                <div>
+                  <div className="text-5xl font-bold mb-2">15+</div>
+                  <p className="text-pink-100">
+                    {region === 'us' ? 'Service Categories' : '服务类别'}
+                  </p>
+                </div>
+                <div>
+                  <div className="text-5xl font-bold mb-2">4.9</div>
+                  <p className="text-pink-100">
+                    {region === 'us' ? 'Average Rating' : '平均评分'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Section */}
+          <div className="py-16 px-4 bg-white">
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-4xl font-bold mb-4">
+                {region === 'us' ? 'Ready to get started?' : '准备开始了吗？'}
+              </h2>
+              <p className="text-xl text-gray-600 mb-8">
+                {region === 'us'
+                  ? 'Join thousands of women who trust SheFixes for their home service needs'
+                  : '加入数千名信赖SheFixes的女性，获得优质的家庭服务'}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button onClick={() => setCurrentPage('booking')} className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full font-semibold shadow-lg">
+                  {region === 'us' ? 'Book a Service' : '预约服务'}
+                </button>
+                {!currentUser && (
+                  <button onClick={() => { setCurrentPage('auth'); setAuthMode('register-technician'); }} className="bg-purple-500 hover:bg-purple-600 text-white px-8 py-4 rounded-full font-semibold shadow-lg">
+                    {region === 'us' ? 'Become a Technician' : '成为技师'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* 预约表单页面 */}
@@ -740,12 +1010,9 @@ const SheFixes = () => {
                     required
                   >
                     <option value="">{c.booking.selectService}</option>
-                    <option value="plumbing">{c.booking.services.plumbing}</option>
-                    <option value="electrical">{c.booking.services.electrical}</option>
-                    <option value="hvac">{c.booking.services.hvac}</option>
-                    <option value="carpentry">{c.booking.services.carpentry}</option>
-                    <option value="painting">{c.booking.services.painting}</option>
-                    <option value="other">{c.booking.services.other}</option>
+                    {Object.entries(c.booking.services).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
                   </select>
                 </div>
 
