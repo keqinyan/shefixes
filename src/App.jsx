@@ -835,6 +835,7 @@ const SheFixes = () => {
                   { key: 'gutter_cleaning', icon: '🚿' },
                   { key: 'auto_repair', icon: '🚗' },
                   { key: 'pet_care', icon: '🐾' },
+                  { key: 'other', icon: '🛠️' },
                 ].map(({ key, icon }) => (
                   <div
                     key={key}
