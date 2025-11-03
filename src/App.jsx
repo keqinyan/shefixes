@@ -44,11 +44,19 @@ const SheFixes = () => {
   const [bookingForm, setBookingForm] = useState({
     service_type: '',
     service_address: '',
+    city: '', // 城市字段用于自动匹配
     description: '',
     preferred_date: '',
     preferred_time: '',
     photo_url: null
   });
+
+  // 自动匹配相关数据
+  const [matchedTechnicians, setMatchedTechnicians] = useState([]);
+  const [selectedTechnician, setSelectedTechnician] = useState(null);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+  const [showTechnicianSelection, setShowTechnicianSelection] = useState(false);
 
   // 聊天数据
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -306,7 +314,160 @@ const SheFixes = () => {
     setCurrentPage('home');
   };
 
-  // 提交预约
+  // 查找匹配的技师
+  const findMatchingTechnicians = async () => {
+    if (!bookingForm.service_type || !bookingForm.city) {
+      alert(region === 'us' ? 'Please select service type and enter city' : '请选择服务类别和输入城市');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('find_matching_technicians', {
+        p_service_type: bookingForm.service_type,
+        p_city: bookingForm.city,
+        p_preferred_date: bookingForm.preferred_date || null
+      });
+
+      if (error) throw error;
+
+      setMatchedTechnicians(data || []);
+      setShowTechnicianSelection(true);
+    } catch (error) {
+      console.error('Error finding technicians:', error);
+      alert(region === 'us' ? 'Failed to find technicians. Please try again.' : '查找技师失败，请重试。');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 获取技师的可用时间槽
+  const getAvailableTimeSlots = async (technicianId, date) => {
+    try {
+      const { data, error } = await supabase.rpc('get_available_slots', {
+        p_technician_id: technicianId,
+        p_date: date
+      });
+
+      if (error) throw error;
+
+      setAvailableTimeSlots(data || []);
+    } catch (error) {
+      console.error('Error fetching time slots:', error);
+      alert(region === 'us' ? 'Failed to fetch available times' : '获取可用时间失败');
+    }
+  };
+
+  // 选择技师
+  const handleSelectTechnician = (technician) => {
+    setSelectedTechnician(technician);
+    if (bookingForm.preferred_date) {
+      getAvailableTimeSlots(technician.technician_id, bookingForm.preferred_date);
+    }
+  };
+
+  // 选择时间槽
+  const handleSelectTimeSlot = (slot) => {
+    setSelectedTimeSlot(slot);
+    setBookingForm({
+      ...bookingForm,
+      preferred_time: slot.time_slot
+    });
+  };
+
+  // 确认预订
+  const confirmBooking = async () => {
+    if (!selectedTechnician || !selectedTimeSlot) {
+      alert(region === 'us' ? 'Please select a technician and time slot' : '请选择技师和时间段');
+      return;
+    }
+
+    // 检查自拍验证状态
+    if (!userSelfieVerified) {
+      setPendingBooking({
+        ...bookingForm,
+        technician_id: selectedTechnician.technician_id,
+        time_slot_id: selectedTimeSlot.slot_id
+      });
+      setShowSelfieVerification(true);
+      return;
+    }
+
+    await submitBookingWithTechnician();
+  };
+
+  // 提交预约（带技师和时间槽）
+  const submitBookingWithTechnician = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      const bookingData = pendingBooking || {
+        ...bookingForm,
+        technician_id: selectedTechnician.technician_id,
+        time_slot_id: selectedTimeSlot.slot_id
+      };
+
+      // 创建预订
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .insert([{
+          user_id: currentUser.id,
+          technician_id: bookingData.technician_id,
+          service_type: bookingData.service_type,
+          service_address: bookingData.service_address,
+          description: bookingData.description,
+          preferred_date: bookingData.preferred_date,
+          preferred_time: bookingData.preferred_time,
+          status: 'confirmed', // 自动确认
+          photo_url: bookingData.photo_url
+        }])
+        .select();
+
+      if (bookingError) throw bookingError;
+
+      // 更新时间槽为已预订
+      const { error: slotError } = await supabase
+        .from('technician_availability')
+        .update({
+          is_booked: true,
+          booking_id: booking[0].id
+        })
+        .eq('id', bookingData.time_slot_id);
+
+      if (slotError) throw slotError;
+
+      alert(region === 'us' ? 'Booking confirmed successfully!' : '预约确认成功！');
+
+      // 重置表单和状态
+      setBookingForm({
+        service_type: '',
+        service_address: '',
+        city: '',
+        description: '',
+        preferred_date: '',
+        preferred_time: '',
+        photo_url: null
+      });
+      setMatchedTechnicians([]);
+      setSelectedTechnician(null);
+      setAvailableTimeSlots([]);
+      setSelectedTimeSlot(null);
+      setShowTechnicianSelection(false);
+      setPendingBooking(null);
+
+      setCurrentPage('dashboard');
+      await fetchUserBookings(currentUser.id);
+    } catch (error) {
+      console.error('Error submitting booking:', error);
+      setError(error.message);
+      alert(region === 'us' ? 'Failed to create booking' : '创建预约失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 提交预约（旧方法 - 保持向后兼容）
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser) {
@@ -315,17 +476,12 @@ const SheFixes = () => {
       return;
     }
 
-    // 检查自拍验证状态
-    if (!userSelfieVerified) {
-      // 保存待提交的订单数据
-      setPendingBooking(bookingForm);
-      // 显示自拍验证模态框
-      setShowSelfieVerification(true);
-      return;
+    // 如果已填写城市和服务类别，显示匹配技师
+    if (bookingForm.city && bookingForm.service_type) {
+      await findMatchingTechnicians();
+    } else {
+      alert(region === 'us' ? 'Please select service type and enter city' : '请选择服务类别和输入城市');
     }
-
-    // 继续提交订单
-    await submitBooking();
   };
 
   // 实际提交订单
@@ -378,7 +534,12 @@ const SheFixes = () => {
 
     // 如果有待提交的订单，现在提交它
     if (pendingBooking) {
-      await submitBooking();
+      // 检查是否是新的预订流程（有technician_id）
+      if (pendingBooking.technician_id) {
+        await submitBookingWithTechnician();
+      } else {
+        await submitBooking();
+      }
     }
   };
 
@@ -1016,18 +1177,35 @@ const SheFixes = () => {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                    <MapPin size={18} />
-                    {c.booking.address}
-                  </label>
-                  <input
-                    type="text"
-                    value={bookingForm.service_address}
-                    onChange={(e) => setBookingForm({ ...bookingForm, service_address: e.target.value })}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                      <MapPin size={18} />
+                      {c.booking.address}
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingForm.service_address}
+                      onChange={(e) => setBookingForm({ ...bookingForm, service_address: e.target.value })}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                      placeholder={region === 'us' ? 'Full address' : '完整地址'}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                      <Home size={18} />
+                      {region === 'us' ? 'City' : '城市'}
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingForm.city}
+                      onChange={(e) => setBookingForm({ ...bookingForm, city: e.target.value })}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                      placeholder={region === 'us' ? 'e.g., San Francisco' : '例如：北京'}
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -1044,34 +1222,19 @@ const SheFixes = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                      <Calendar size={18} />
-                      {c.booking.date}
-                    </label>
-                    <input
-                      type="date"
-                      value={bookingForm.preferred_date}
-                      onChange={(e) => setBookingForm({ ...bookingForm, preferred_date: e.target.value })}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                      <Clock size={18} />
-                      {c.booking.time}
-                    </label>
-                    <input
-                      type="time"
-                      value={bookingForm.preferred_time}
-                      onChange={(e) => setBookingForm({ ...bookingForm, preferred_time: e.target.value })}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Calendar size={18} />
+                    {c.booking.date}
+                  </label>
+                  <input
+                    type="date"
+                    value={bookingForm.preferred_date}
+                    onChange={(e) => setBookingForm({ ...bookingForm, preferred_date: e.target.value })}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
                 </div>
 
                 <div>
@@ -1093,11 +1256,163 @@ const SheFixes = () => {
                   disabled={loading}
                   className={`w-full py-4 rounded-lg font-semibold text-white text-lg ${loading ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'}`}
                 >
-                  {loading ? '...' : c.booking.submit}
+                  {loading ? '...' : (region === 'us' ? 'Find Available Technicians' : '查找可用技师')}
                 </button>
               </form>
             </div>
           </div>
+
+          {/* Technician Selection Modal */}
+          {showTechnicianSelection && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">
+                    {region === 'us' ? 'Select a Technician' : '选择技师'}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowTechnicianSelection(false);
+                      setMatchedTechnicians([]);
+                      setSelectedTechnician(null);
+                      setAvailableTimeSlots([]);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-full"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  {matchedTechnicians.length === 0 ? (
+                    <div className="text-center py-12">
+                      <AlertCircle className="mx-auto mb-4 text-gray-400" size={48} />
+                      <p className="text-gray-600">
+                        {region === 'us'
+                          ? 'No technicians available for your area and service type. Please try a different city or service.'
+                          : '该地区和服务类型暂无可用技师。请尝试其他城市或服务。'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Technician List */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">
+                          {region === 'us' ? `${matchedTechnicians.length} Technicians Found` : `找到 ${matchedTechnicians.length} 位技师`}
+                        </h3>
+                        {matchedTechnicians.map((tech) => (
+                          <div
+                            key={tech.technician_id}
+                            className={`border rounded-lg p-4 cursor-pointer transition ${
+                              selectedTechnician?.technician_id === tech.technician_id
+                                ? 'border-pink-500 bg-pink-50'
+                                : 'border-gray-200 hover:border-pink-300'
+                            }`}
+                            onClick={() => handleSelectTechnician(tech)}
+                          >
+                            <div className="flex items-start gap-4">
+                              <img
+                                src={tech.photo_url || 'https://i.pravatar.cc/150'}
+                                alt={tech.name}
+                                className="w-16 h-16 rounded-full object-cover"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-semibold">{tech.name}</h4>
+                                  {tech.selfie_verified && <VerifiedBadge />}
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
+                                  <Star className="text-yellow-500 fill-current" size={16} />
+                                  <span className="font-semibold">{tech.rating.toFixed(2)}</span>
+                                </div>
+                                {tech.hourly_rate && (
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    ${tech.hourly_rate}/{region === 'us' ? 'hour' : '小时'}
+                                  </p>
+                                )}
+                                <p className="text-sm text-gray-600 mt-2">{tech.bio}</p>
+                                {tech.available_slots_count > 0 && (
+                                  <p className="text-sm text-green-600 font-semibold mt-2">
+                                    {tech.available_slots_count} {region === 'us' ? 'time slots available' : '个可用时间段'}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Time Slot Selection */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">
+                          {region === 'us' ? 'Available Time Slots' : '可用时间段'}
+                        </h3>
+                        {!selectedTechnician ? (
+                          <p className="text-gray-500 text-center py-8">
+                            {region === 'us' ? 'Select a technician to see available times' : '选择技师以查看可用时间'}
+                          </p>
+                        ) : availableTimeSlots.length === 0 ? (
+                          <div className="text-center py-8">
+                            <Clock className="mx-auto mb-2 text-gray-400" size={32} />
+                            <p className="text-gray-500">
+                              {region === 'us'
+                                ? 'No time slots available for the selected date. Try a different date.'
+                                : '所选日期没有可用时间。请尝试其他日期。'}
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="grid grid-cols-2 gap-2 mb-6">
+                              {availableTimeSlots.map((slot) => (
+                                <button
+                                  key={slot.slot_id}
+                                  onClick={() => handleSelectTimeSlot(slot)}
+                                  className={`px-4 py-3 rounded-lg border font-semibold transition ${
+                                    selectedTimeSlot?.slot_id === slot.slot_id
+                                      ? 'bg-pink-500 text-white border-pink-600'
+                                      : 'bg-white border-gray-300 hover:border-pink-400'
+                                  }`}
+                                >
+                                  <Clock size={16} className="inline mr-2" />
+                                  {slot.time_slot}
+                                </button>
+                              ))}
+                            </div>
+
+                            {selectedTimeSlot && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h4 className="font-semibold mb-2">
+                                  {region === 'us' ? 'Booking Summary' : '预订摘要'}
+                                </h4>
+                                <p className="text-sm">
+                                  <strong>{region === 'us' ? 'Technician:' : '技师：'}</strong> {selectedTechnician.name}
+                                </p>
+                                <p className="text-sm">
+                                  <strong>{region === 'us' ? 'Date:' : '日期：'}</strong> {bookingForm.preferred_date}
+                                </p>
+                                <p className="text-sm">
+                                  <strong>{region === 'us' ? 'Time:' : '时间：'}</strong> {selectedTimeSlot.time_slot}
+                                </p>
+                                <button
+                                  onClick={confirmBooking}
+                                  disabled={loading}
+                                  className={`w-full mt-4 py-3 rounded-lg font-semibold text-white ${
+                                    loading ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'
+                                  }`}
+                                >
+                                  {loading ? '...' : (region === 'us' ? 'Confirm Booking' : '确认预订')}
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
