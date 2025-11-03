@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, X, Wrench, Shield, Heart, AlertCircle, CheckCircle, Star, Globe, Camera, Search, MapPin } from 'lucide-react';
+import { Menu, X, Wrench, Shield, Heart, AlertCircle, CheckCircle, Star, Globe, Camera, Search, MapPin, User, LogOut, Eye, EyeOff, Mail, Lock, Phone, Package } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 const SheFixes = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -9,195 +10,202 @@ const SheFixes = () => {
   const [searchAddress, setSearchAddress] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showResults, setShowResults] = useState(false);
-  const [regStep, setRegStep] = useState(1);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', city: '', preference: 'women-only' });
-  const [photo, setPhoto] = useState(null);
-  const [stream, setStream] = useState(null);
-  const [isCameraOn, setIsCameraOn] = useState(false);
   const [error, setError] = useState('');
+  
+  // 认证状态
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // 登录/注册数据
+  const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [registerData, setRegisterData] = useState({
+    email: '', password: '', name: '', phone: '', city: '', preference: 'women-only'
+  });
+  
+  // 订单数据
+  const [userBookings, setUserBookings] = useState([]);
+  
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
+  // 检查用户登录状态
+  useEffect(() => {
+    checkUser();
+    
+    // 监听认证状态变化
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserBookings(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+      if (user) {
+        await fetchUserBookings(user.id);
+      }
+    } catch (error) {
+      console.error('Error checking user:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserBookings = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          technician:technicians(name, photo_url, rating)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setUserBookings(data || []);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    }
+  };
+
+  // 登录
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginData.email,
+        password: loginData.password
+      });
+
+      if (error) throw error;
+
+      setCurrentPage('dashboard');
+    } catch (error) {
+      setError(region === 'us' ? 'Invalid email or password' : '邮箱或密码错误');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 注册
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    if (!registerData.email || !registerData.password || !registerData.name || 
+        !registerData.phone || !registerData.city) {
+      setError(region === 'us' ? 'Please fill all fields' : '请填写所有字段');
+      setLoading(false);
+      return;
+    }
+
+    if (registerData.password.length < 6) {
+      setError(region === 'us' ? 'Password must be at least 6 characters' : '密码至少6个字符');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: registerData.email,
+        password: registerData.password,
+        options: {
+          data: {
+            name: registerData.name,
+            phone: registerData.phone,
+            city: registerData.city,
+            preference: registerData.preference,
+            region: region
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // 创建用户记录
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert([{
+          id: data.user.id,
+          email: registerData.email,
+          name: registerData.name,
+          phone: registerData.phone,
+          city: registerData.city,
+          preference: registerData.preference,
+          region: region
+        }]);
+
+      if (insertError) throw insertError;
+
+      alert(region === 'us' 
+        ? 'Account created! Please check your email to verify.' 
+        : '账号创建成功！请查看邮箱验证。');
+      
+      setAuthMode('login');
+    } catch (error) {
+      setError(error.message || (region === 'us' ? 'Registration failed' : '注册失败'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 登出
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setCurrentPage('home');
+  };
+
+  // 文本内容（简化版）
   const t = {
     us: {
-      currency: '$',
-      nav: { home: 'Home', find: 'Find', register: 'Register' },
-      hero: { title: 'Fix it. Own it.', subtitle: 'Safe repair for women by women', find: 'Find Technician', reg: 'Register' },
-      search: {
-        title: 'Find Your Technician', address: 'Address or Zip', addressPH: 'Durham, NC or 27701',
-        category: 'What needs fixing?', catPH: 'Select category',
-        cats: ['Furniture', 'Network', 'Computer', 'Lighting', 'Appliances', '3D/Sewing', 'Other'],
-        search: 'Search', noResult: 'No Technicians Yet', noMsg: 'We are finding technicians in your area!',
-        wait: 'Join Waitlist', results: 'Available Technicians'
+      nav: { home: 'Home', find: 'Find', dashboard: 'My Orders', login: 'Login', logout: 'Logout' },
+      auth: {
+        login: 'Login', register: 'Register', email: 'Email', password: 'Password',
+        name: 'Name', phone: 'Phone', city: 'City', loginBtn: 'Log In', registerBtn: 'Create Account',
+        noAccount: "Don't have an account?", haveAccount: 'Have an account?', signUp: 'Sign up', signIn: 'Sign in'
       },
-      tech: {
-        pref: 'Preference',
-        prefs: [
-          { value: 'women-only', label: 'Women only' },
-          { value: 'women-nb', label: 'Women & NB' },
-          { value: 'all-inclusive', label: 'All' }
-        ],
-        works: 'Works with:', rate: '/hr', book: 'Book', area: 'Service Area'
-      },
-      reg: {
-        title: 'Register', s1: 'Step 1: Info', s2: 'Step 2: Photo', s3: 'Complete!',
-        name: 'Name', email: 'Email', phone: 'Phone', city: 'City', pref: 'Preference',
-        prefs: [
-          { value: 'women-only', label: 'Women only' },
-          { value: 'women-nb', label: 'Women & NB' },
-          { value: 'all-inclusive', label: 'All' }
-        ],
-        photo: 'Live Selfie', photoDesc: 'Live photo required for safety',
-        start: 'Start Camera', take: 'Take Photo', retake: 'Retake',
-        next: 'Next', submit: 'Submit', back: 'Back',
-        success: 'Welcome!', successMsg: 'We will contact you in 24h',
-        camErr: 'Cannot access camera', fillAll: 'Fill all fields', takeFirst: 'Take photo first'
+      dashboard: {
+        title: 'My Orders',
+        noOrders: 'No orders yet',
+        startBooking: 'Book a Service',
+        status: { pending: 'Pending', confirmed: 'Confirmed', in_progress: 'In Progress', completed: 'Completed', cancelled: 'Cancelled' }
       }
     },
     cn: {
-      currency: '¥',
-      nav: { home: '首页', find: '找技师', register: '注册' },
-      hero: { title: '她修她世界', subtitle: '为女性打造的安全维修社区', find: '找技师', reg: '注册' },
-      search: {
-        title: '找技师', address: '地址或邮编', addressPH: '杭州市西湖区',
-        category: '需要什么服务？', catPH: '选择类别',
-        cats: ['家具', '网络', '电脑', '灯具', '家电', '3D/缝纫', '其他'],
-        search: '搜索', noResult: '暂无技师', noMsg: '正在寻找您当地的技师！',
-        wait: '加入等候', results: '可用技师'
+      nav: { home: '首页', find: '找技师', dashboard: '我的订单', login: '登录', logout: '退出' },
+      auth: {
+        login: '登录', register: '注册', email: '邮箱', password: '密码',
+        name: '姓名', phone: '手机', city: '城市', loginBtn: '登录', registerBtn: '创建账号',
+        noAccount: '还没有账号？', haveAccount: '已有账号？', signUp: '注册', signIn: '登录'
       },
-      tech: {
-        pref: '偏好',
-        prefs: [
-          { value: 'women-only', label: '仅女性' },
-          { value: 'women-nb', label: '女性与非二元' },
-          { value: 'all-inclusive', label: '全包容' }
-        ],
-        works: '服务：', rate: '/时', book: '预约', area: '服务区'
-      },
-      reg: {
-        title: '注册', s1: '第一步', s2: '第二步', s3: '完成！',
-        name: '姓名', email: '邮箱', phone: '手机', city: '城市', pref: '偏好',
-        prefs: [
-          { value: 'women-only', label: '仅女性' },
-          { value: 'women-nb', label: '女性与非二元' },
-          { value: 'all-inclusive', label: '全包容' }
-        ],
-        photo: '自拍', photoDesc: '安全需要实时拍照',
-        start: '开相机', take: '拍照', retake: '重拍',
-        next: '下一步', submit: '提交', back: '返回',
-        success: '欢迎！', successMsg: '24小时内联系您',
-        camErr: '无法访问相机', fillAll: '请填写全部', takeFirst: '请先拍照'
+      dashboard: {
+        title: '我的订单',
+        noOrders: '暂无订单',
+        startBooking: '预约服务',
+        status: { pending: '待确认', confirmed: '已确认', in_progress: '进行中', completed: '已完成', cancelled: '已取消' }
       }
     }
   };
 
   const c = t[region];
 
-  const techs = [
-    { id: 1, name: region === 'us' ? 'Maya' : '陈晓雨', avatar: '👩‍🔧', rating: 4.9, jobs: 127, rate: region === 'us' ? 45 : 150,
-      specs: region === 'us' ? ['Network', 'Computer'] : ['网络', '电脑'], pref: 'women-only', gender: 'woman',
-      area: region === 'us' ? 'Durham, Chapel Hill' : '杭州市区', cats: region === 'us' ? ['Network', 'Computer'] : ['网络', '电脑'] },
-    { id: 2, name: region === 'us' ? 'Jamie' : '刘芳', avatar: '👩‍💼', rating: 4.8, jobs: 93, rate: region === 'us' ? 40 : 135,
-      specs: region === 'us' ? ['Furniture'] : ['家具'], pref: 'women-nb', gender: 'woman',
-      area: region === 'us' ? 'Durham' : '杭州', cats: region === 'us' ? ['Furniture'] : ['家具'] },
-    { id: 3, name: region === 'us' ? 'Alex' : '张可欣', avatar: '👩‍🎨', rating: 5.0, jobs: 68, rate: region === 'us' ? 50 : 165,
-      specs: region === 'us' ? ['3D/Sewing'] : ['3D/缝纫'], pref: 'all-inclusive', gender: 'non-binary',
-      area: region === 'us' ? 'Chapel Hill' : '萧山', cats: region === 'us' ? ['3D/Sewing'] : ['3D/缝纫'] }
-  ];
-
-  const search = () => {
-    if (!searchAddress || !selectedCategory) {
-      setError(region === 'us' ? 'Fill all fields' : '请填写全部');
-      return;
-    }
-    setError('');
-    setShowResults(true);
-  };
-
-  const filtered = () => {
-    let f = techs;
-    if (userPreference === 'women-only') f = f.filter(t => t.gender === 'woman');
-    else if (userPreference === 'women-nb') f = f.filter(t => t.gender === 'woman' || t.gender === 'non-binary');
-    if (searchAddress) {
-      const a = searchAddress.toLowerCase();
-      f = f.filter(t => t.area.toLowerCase().includes(a.split(',')[0].trim().toLowerCase()));
-    }
-    if (selectedCategory && selectedCategory !== 'Other') {
-      f = f.filter(t => t.cats.includes(selectedCategory));
-    }
-    return f;
-  };
-
-  const prefLabel = (p) => {
-    const l = { us: { 'women-only': 'Women', 'women-nb': 'Women&NB', 'all-inclusive': 'All' },
-                cn: { 'women-only': '仅女性', 'women-nb': '女性非二元', 'all-inclusive': '全包容' } };
-    return l[region][p];
-  };
-
-  const startCam = async () => {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-      setStream(s);
-      if (videoRef.current) videoRef.current.srcObject = s;
-      setIsCameraOn(true);
-      setError('');
-    } catch (e) {
-      setError(c.reg.camErr);
-    }
-  };
-
-  const stopCam = () => {
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      setStream(null);
-      setIsCameraOn(false);
-    }
-  };
-
-  const takeP = () => {
-    if (videoRef.current && canvasRef.current) {
-      const v = videoRef.current;
-      const can = canvasRef.current;
-      const ctx = can.getContext('2d');
-      can.width = v.videoWidth;
-      can.height = v.videoHeight;
-      ctx.drawImage(v, 0, 0);
-      setPhoto(can.toDataURL('image/jpeg'));
-      stopCam();
-    }
-  };
-
-  const retake = () => { setPhoto(null); startCam(); };
-
-  useEffect(() => { return () => stopCam(); }, []);
-
-  const val1 = () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.city) {
-      setError(c.reg.fillAll);
-      return false;
-    }
-    setError('');
-    return true;
-  };
-
-  const val2 = () => {
-    if (!photo) {
-      setError(c.reg.takeFirst);
-      return false;
-    }
-    setError('');
-    return true;
-  };
-
-  const submit = () => {
-    if (val2()) {
-      console.log('Reg:', formData, photo);
-      setRegStep(3);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-white">
+      {/* 导航栏 */}
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentPage('home')}>
@@ -207,276 +215,218 @@ const SheFixes = () => {
           <div className="hidden md:flex items-center gap-6">
             <button onClick={() => setCurrentPage('home')} className="hover:text-pink-500">{c.nav.home}</button>
             <button onClick={() => setCurrentPage('find')} className="hover:text-pink-500">{c.nav.find}</button>
-            <button onClick={() => setCurrentPage('register')} className="hover:text-pink-500">{c.nav.register}</button>
-            <button onClick={() => setRegion(region === 'us' ? 'cn' : 'us')} className="hover:text-pink-500"><Globe size={20} /></button>
+            {currentUser ? (
+              <>
+                <button onClick={() => setCurrentPage('dashboard')} className="hover:text-pink-500">{c.nav.dashboard}</button>
+                <button onClick={handleLogout} className="flex items-center gap-2 hover:text-pink-500">
+                  <LogOut size={18} />{c.nav.logout}
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setCurrentPage('auth')} className="hover:text-pink-500">{c.nav.login}</button>
+            )}
+            <button onClick={() => setRegion(region === 'us' ? 'cn' : 'us')} className="hover:text-pink-500">
+              <Globe size={20} />
+            </button>
           </div>
-          <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
         </div>
       </nav>
 
+      {/* 主页 */}
       {currentPage === 'home' && (
-        <>
-          <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 pt-20 pb-16 px-4">
-            <div className="max-w-6xl mx-auto text-center">
-              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">{c.hero.title}</h1>
-              <p className="text-2xl text-gray-700 mb-8">{c.hero.subtitle}</p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button onClick={() => setCurrentPage('find')} className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full font-semibold shadow-lg">
-                  {c.hero.find}
+        <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 pt-20 pb-16 px-4">
+          <div className="max-w-6xl mx-auto text-center">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
+              {region === 'us' ? 'Fix it. Own it.' : '她修她世界'}
+            </h1>
+            <p className="text-2xl text-gray-700 mb-8">
+              {region === 'us' ? 'Safe repair for women by women' : '为女性打造的安全维修社区'}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button onClick={() => setCurrentPage('find')} className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full font-semibold shadow-lg">
+                {region === 'us' ? 'Find Technician' : '找技师'}
+              </button>
+              {!currentUser && (
+                <button onClick={() => setCurrentPage('auth')} className="bg-white text-pink-500 border-2 border-pink-500 px-8 py-4 rounded-full font-semibold shadow-lg">
+                  {region === 'us' ? 'Register' : '注册'}
                 </button>
-                <button onClick={() => setCurrentPage('register')} className="bg-white text-pink-500 border-2 border-pink-500 px-8 py-4 rounded-full font-semibold shadow-lg">
-                  {c.hero.reg}
-                </button>
-              </div>
+              )}
             </div>
           </div>
+        </div>
+      )}
 
-          <div className="py-16 px-4 bg-white">
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-8 md:p-12">
-                <h2 className="text-3xl font-bold mb-8 text-center">
-                  {region === 'us' ? 'A Safe Space' : '安心空间'}
-                </h2>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-2xl p-6">
-                    <Shield className="text-pink-500 mb-3" size={32} />
-                    <h3 className="font-bold text-lg mb-2">{region === 'us' ? 'Mutual Safety' : '双向安全'}</h3>
-                    <p className="text-sm text-gray-700">
-                      {region === 'us' ? 'Either party can end service immediately. Platform covers all costs.' : '任何一方可立即终止。平台承担费用。'}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-2xl p-6">
-                    <Heart className="text-purple-500 mb-3" size={32} />
-                    <h3 className="font-bold text-lg mb-2">{region === 'us' ? 'Preference Matching' : '偏好匹配'}</h3>
-                    <p className="text-sm text-gray-700">
-                      {region === 'us' ? 'Set preferences for who you work with.' : '设置服务对象偏好。'}
-                    </p>
-                  </div>
+      {/* 登录/注册页面 */}
+      {currentPage === 'auth' && !currentUser && (
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center px-4 py-12">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold mb-2">SheFixes</h1>
+              <p className="text-gray-600">
+                {authMode === 'login' 
+                  ? (region === 'us' ? 'Welcome back!' : '欢迎回来！')
+                  : (region === 'us' ? 'Join us' : '加入我们')}
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-2 mb-6 flex shadow-sm">
+              <button onClick={() => setAuthMode('login')}
+                className={`flex-1 py-3 rounded-xl font-semibold transition ${authMode === 'login' ? 'bg-pink-500 text-white' : 'text-gray-600'}`}>
+                {c.auth.login}
+              </button>
+              <button onClick={() => setAuthMode('register')}
+                className={`flex-1 py-3 rounded-xl font-semibold transition ${authMode === 'register' ? 'bg-pink-500 text-white' : 'text-gray-600'}`}>
+                {c.auth.register}
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              {error && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+                  <AlertCircle className="text-red-500" size={20} />
+                  <p className="text-red-700 text-sm">{error}</p>
                 </div>
-              </div>
+              )}
+
+              {authMode === 'login' ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">{c.auth.email}</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                      <input type="email" value={loginData.email}
+                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                        className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                        placeholder="your@email.com" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">{c.auth.password}</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                      <input type={showPassword ? 'text' : 'password'} value={loginData.password}
+                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                        className="w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                        placeholder="••••••••" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                  </div>
+                  <button onClick={handleLogin} disabled={loading}
+                    className={`w-full py-3 rounded-lg font-semibold text-white ${loading ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'}`}>
+                    {loading ? '...' : c.auth.loginBtn}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">{c.auth.email}</label>
+                    <input type="email" value={registerData.email}
+                      onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">{c.auth.password}</label>
+                    <input type={showPassword ? 'text' : 'password'} value={registerData.password}
+                      onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">{c.auth.name}</label>
+                    <input type="text" value={registerData.name}
+                      onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.phone}</label>
+                      <input type="tel" value={registerData.phone}
+                        onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">{c.auth.city}</label>
+                      <input type="text" value={registerData.city}
+                        onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" />
+                    </div>
+                  </div>
+                  <button onClick={handleRegister} disabled={loading}
+                    className={`w-full py-3 rounded-lg font-semibold text-white ${loading ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'}`}>
+                    {loading ? '...' : c.auth.registerBtn}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
+        </div>
+      )}
 
-          <div className="py-16 px-4 bg-gray-50">
-            <div className="max-w-6xl mx-auto">
-              <h2 className="text-3xl font-bold text-center mb-12">{region === 'us' ? 'What We Fix' : '服务范围'}</h2>
-              <div className="grid md:grid-cols-3 gap-6">
-                {[
-                  {icon:'🪑',title:region==='us'?'Furniture':'家具',desc:region==='us'?'Assembly & repair':'组装维修'},
-                  {icon:'📡',title:region==='us'?'Network':'网络',desc:region==='us'?'WiFi & routers':'WiFi路由'},
-                  {icon:'💻',title:region==='us'?'Computer':'电脑',desc:region==='us'?'Data & upgrades':'数据升级'},
-                  {icon:'💡',title:region==='us'?'Lighting':'灯具',desc:region==='us'?'Installation':'安装维修'},
-                  {icon:'🔧',title:region==='us'?'Appliances':'家电',desc:region==='us'?'Basic repairs':'基础维修'},
-                  {icon:'🎨',title:region==='us'?'Creative':'创作',desc:region==='us'?'3D & sewing':'3D缝纫机'}
-                ].map((s,i)=>(
-                  <div key={i} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition">
-                    <div className="text-4xl mb-3">{s.icon}</div>
-                    <h3 className="text-lg font-semibold mb-2">{s.title}</h3>
-                    <p className="text-sm text-gray-600">{s.desc}</p>
+      {/* 我的订单页面 */}
+      {currentPage === 'dashboard' && currentUser && (
+        <div className="py-16 px-4 bg-gray-50 min-h-screen">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-4xl font-bold">{c.dashboard.title}</h1>
+              <button onClick={() => setCurrentPage('find')}
+                className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-full font-semibold">
+                {c.dashboard.startBooking}
+              </button>
+            </div>
+
+            {userBookings.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+                <Package className="text-gray-300 mx-auto mb-4" size={64} />
+                <h3 className="text-2xl font-bold mb-2">{c.dashboard.noOrders}</h3>
+                <button onClick={() => setCurrentPage('find')}
+                  className="mt-6 bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 rounded-full font-semibold">
+                  {c.dashboard.startBooking}
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {userBookings.map((booking) => (
+                  <div key={booking.id} className="bg-white rounded-2xl shadow-lg p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-bold text-lg">{booking.service_type}</h3>
+                        <p className="text-gray-600 text-sm">{booking.service_address}</p>
+                      </div>
+                      <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                        booking.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        booking.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {c.dashboard.status[booking.status]}
+                      </span>
+                    </div>
+                    <p className="text-gray-700 mb-4">{booking.description}</p>
+                    {booking.technician && (
+                      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                        <div className="text-3xl">👩‍🔧</div>
+                        <div>
+                          <p className="font-semibold">{booking.technician.name}</p>
+                          <div className="flex items-center gap-1">
+                            <Star className="text-yellow-400 fill-yellow-400" size={16} />
+                            <span className="text-sm">{booking.technician.rating}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-
-          <div className="py-16 px-4 bg-gradient-to-br from-pink-500 to-purple-500 text-white">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-4xl font-bold mb-8">{region==='us'?'Ready to Start?':'准备开始了吗？'}</h2>
-              <div className="flex gap-4 justify-center">
-                <button onClick={()=>setCurrentPage('register')} className="bg-white text-pink-500 px-8 py-4 rounded-full font-semibold shadow-lg">
-                  {region==='us'?'Register':'立即注册'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {currentPage === 'find' && (
-        <div className="py-16 px-4 bg-gray-50 min-h-screen">
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-4xl font-bold text-center mb-8">{c.search.title}</h1>
-            <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="block font-semibold mb-2">{c.search.address}</label>
-                  <input type="text" value={searchAddress} onChange={e=>setSearchAddress(e.target.value)}
-                    placeholder={c.search.addressPH} className="w-full px-4 py-3 border-2 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-2">{c.search.category}</label>
-                  <select value={selectedCategory} onChange={e=>setSelectedCategory(e.target.value)}
-                    className="w-full px-4 py-3 border-2 rounded-lg">
-                    <option value="">{c.search.catPH}</option>
-                    {c.search.cats.map((cat,i)=><option key={i} value={cat}>{cat}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="mb-6">
-                <label className="block font-semibold mb-3">{c.tech.pref}</label>
-                <div className="grid md:grid-cols-3 gap-3">
-                  {c.tech.prefs.map(p=>(
-                    <label key={p.value} className="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer">
-                      <input type="radio" name="pref" value={p.value} checked={userPreference===p.value} onChange={e=>setUserPreference(e.target.value)}/>
-                      <span className="text-sm font-semibold">{p.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              {error&&(<div className="mb-4 bg-red-50 border p-3 rounded flex items-center gap-2">
-                <AlertCircle className="text-red-500" size={20}/><span className="text-red-700 text-sm">{error}</span>
-              </div>)}
-              <button onClick={search} className="w-full bg-pink-500 text-white py-4 rounded-lg font-semibold flex items-center justify-center gap-2">
-                <Search size={20}/>{c.search.search}
-              </button>
-            </div>
-            {showResults&&(<>
-              {filtered().length>0?(
-                <><h2 className="text-2xl font-bold mb-6">{c.search.results}</h2>
-                <div className="grid md:grid-cols-3 gap-6">
-                  {filtered().map(tech=>(
-                    <div key={tech.id} className="bg-white rounded-2xl shadow-lg p-6">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="text-5xl">{tech.avatar}</div>
-                        <div><h3 className="font-bold text-lg">{tech.name}</h3>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Star className="text-yellow-400 fill-yellow-400" size={16}/>
-                          <span>{tech.rating}</span><span className="text-gray-500">({tech.jobs})</span>
-                        </div></div>
-                      </div>
-                      <div className="mb-3 p-2 bg-blue-50 rounded text-sm">
-                        <div className="text-xs text-gray-600">{c.tech.area}</div>
-                        <div className="font-semibold">{tech.area}</div>
-                      </div>
-                      <div className="mb-3 p-2 bg-purple-50 rounded text-sm">
-                        <div className="text-xs text-gray-600">{c.tech.works}</div>
-                        <div className="font-semibold">{prefLabel(tech.pref)}</div>
-                      </div>
-                      <div className="mb-3 flex justify-between">
-                        <span className="text-sm text-gray-600">{c.tech.rate}</span>
-                        <span className="text-2xl font-bold text-pink-500">{c.currency}{tech.rate}</span>
-                      </div>
-                      <button className="w-full bg-pink-500 text-white py-3 rounded-lg font-semibold">{c.tech.book}</button>
-                    </div>
-                  ))}
-                </div></>
-              ):(
-                <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-                  <AlertCircle className="text-gray-400 mx-auto mb-4" size={64}/>
-                  <h3 className="text-2xl font-bold mb-2">{c.search.noResult}</h3>
-                  <p className="text-gray-600 mb-6">{c.search.noMsg}</p>
-                  <button className="bg-pink-500 text-white px-8 py-3 rounded-full font-semibold">{c.search.wait}</button>
-                </div>
-              )}
-            </>)}
-          </div>
-        </div>
-      )}
-
-      {currentPage==='register'&&(
-        <div className="py-16 px-4 bg-gray-50 min-h-screen">
-          <div className="max-w-2xl mx-auto">
-            <h1 className="text-4xl font-bold text-center mb-8">{c.reg.title}</h1>
-            <div className="mb-8 flex justify-between">
-              {[1,2,3].map(s=>(
-                <div key={s} className="flex items-center flex-1">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${regStep>=s?'bg-pink-500 text-white':'bg-gray-200'}`}>{s}</div>
-                  {s<3&&<div className={`flex-1 h-1 mx-2 ${regStep>s?'bg-pink-500':'bg-gray-200'}`}/>}
-                </div>
-              ))}
-            </div>
-            {error&&(<div className="bg-red-50 border p-4 mb-6 flex items-center gap-3 rounded">
-              <AlertCircle className="text-red-500" size={24}/><p className="text-red-700">{error}</p>
-            </div>)}
-            {regStep===1&&(
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold mb-6">{c.reg.s1}</h2>
-                <div className="space-y-4">
-                  <div><label className="block font-semibold mb-2">{c.reg.name}</label>
-                    <input type="text" value={formData.name} onChange={e=>setFormData({...formData,name:e.target.value})}
-                      className="w-full px-4 py-3 border rounded-lg"/></div>
-                  <div><label className="block font-semibold mb-2">{c.reg.email}</label>
-                    <input type="email" value={formData.email} onChange={e=>setFormData({...formData,email:e.target.value})}
-                      className="w-full px-4 py-3 border rounded-lg"/></div>
-                  <div><label className="block font-semibold mb-2">{c.reg.phone}</label>
-                    <input type="tel" value={formData.phone} onChange={e=>setFormData({...formData,phone:e.target.value})}
-                      className="w-full px-4 py-3 border rounded-lg"/></div>
-                  <div><label className="block font-semibold mb-2">{c.reg.city}</label>
-                    <input type="text" value={formData.city} onChange={e=>setFormData({...formData,city:e.target.value})}
-                      className="w-full px-4 py-3 border rounded-lg"/></div>
-                  <div><label className="block font-semibold mb-2">{c.reg.pref}</label>
-                    <div className="space-y-2">
-                      {c.reg.prefs.map(p=>(
-                        <label key={p.value} className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer">
-                          <input type="radio" name="pref" value={p.value} checked={formData.preference===p.value}
-                            onChange={e=>setFormData({...formData,preference:e.target.value})}/><span>{p.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <button onClick={()=>{if(val1())setRegStep(2);}} className="w-full mt-6 bg-pink-500 text-white py-4 rounded-lg font-semibold">
-                  {c.reg.next}
-                </button>
-              </div>
-            )}
-            {regStep===2&&(
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <button onClick={()=>setRegStep(1)} className="text-gray-600 mb-4">← {c.reg.back}</button>
-                <h2 className="text-2xl font-bold mb-6">{c.reg.s2}</h2>
-                <p className="text-gray-600 mb-4">{c.reg.photoDesc}</p>
-                <div className="bg-gray-900 rounded-lg overflow-hidden relative aspect-video mb-6">
-                  {!isCameraOn&&!photo&&(
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <button onClick={startCam} className="bg-pink-500 text-white px-8 py-4 rounded-full font-semibold flex items-center gap-2">
-                        <Camera size={24}/>{c.reg.start}
-                      </button>
-                    </div>
-                  )}
-                  {isCameraOn&&!photo&&(
-                    <><video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"/>
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-                      <button onClick={takeP} className="bg-white text-gray-900 px-8 py-4 rounded-full font-semibold flex items-center gap-2">
-                        <Camera size={24}/>{c.reg.take}
-                      </button>
-                    </div></>
-                  )}
-                  {photo&&(
-                    <><img src={photo} alt="Captured" className="w-full h-full object-cover"/>
-                    <div className="absolute top-4 right-4"><CheckCircle className="text-green-500 bg-white rounded-full" size={48}/></div>
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-                      <button onClick={retake} className="bg-white text-gray-900 px-6 py-3 rounded-full font-semibold flex items-center gap-2">
-                        <X size={20}/>{c.reg.retake}
-                      </button>
-                    </div></>
-                  )}
-                </div>
-                <canvas ref={canvasRef} className="hidden"/>
-                <button onClick={submit} disabled={!photo}
-                  className={`w-full py-4 rounded-lg font-semibold ${photo?'bg-pink-500 text-white':'bg-gray-200 text-gray-400'}`}>
-                  {c.reg.submit}
-                </button>
-              </div>
-            )}
-            {regStep===3&&(
-              <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-                <CheckCircle className="text-green-500 mx-auto mb-4" size={80}/>
-                <h2 className="text-3xl font-bold mb-3">{c.reg.success}</h2>
-                <p className="text-lg text-gray-600">{c.reg.successMsg}</p>
-                <button onClick={()=>setCurrentPage('home')} className="mt-6 bg-pink-500 text-white px-8 py-3 rounded-full font-semibold">
-                  {region==='us'?'Back to Home':'返回首页'}
-                </button>
-              </div>
             )}
           </div>
         </div>
       )}
 
+      {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 px-4">
         <div className="max-w-6xl mx-auto text-center">
-          <Wrench size={32} className="mx-auto mb-4"/>
+          <Wrench size={32} className="mx-auto mb-4" />
           <p className="text-2xl font-bold mb-2">SheFixes</p>
           <p className="text-gray-400 text-sm">hello@shefixes.com</p>
           <p className="text-gray-500 text-sm mt-4">© 2025 SheFixes</p>
