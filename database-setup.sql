@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS users (
   city TEXT,
   preference TEXT DEFAULT 'women-only',
   region TEXT DEFAULT 'us',
+  selfie_verified BOOLEAN DEFAULT false,
+  selfie_photo_url TEXT,
+  selfie_verified_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -26,6 +29,9 @@ CREATE TABLE IF NOT EXISTS technicians (
   bio TEXT,
   city TEXT,
   verified BOOLEAN DEFAULT false,
+  selfie_verified BOOLEAN DEFAULT false,
+  selfie_photo_url TEXT,
+  selfie_verified_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

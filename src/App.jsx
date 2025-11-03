@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Menu, X, Wrench, Shield, Heart, AlertCircle, CheckCircle, Star, Globe, Camera, Search, MapPin, User, LogOut, Eye, EyeOff, Mail, Lock, Phone, Package, MessageCircle, Send, Calendar, Clock, Home, DollarSign, Image as ImageIcon } from 'lucide-react';
 import { supabase } from './supabaseClient';
+import SelfieVerification from './components/SelfieVerification';
+import VerifiedBadge from './components/VerifiedBadge';
 
 const SheFixes = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,6 +53,11 @@ const SheFixes = () => {
   });
   const [showReviewModal, setShowReviewModal] = useState(false);
 
+  // 自拍验证数据
+  const [showSelfieVerification, setShowSelfieVerification] = useState(false);
+  const [userSelfieVerified, setUserSelfieVerified] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState(null);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -76,11 +83,28 @@ const SheFixes = () => {
       setCurrentUser(user);
       if (user) {
         await fetchUserBookings(user.id);
+        await checkSelfieVerification(user.id);
       }
     } catch (error) {
       console.error('Error checking user:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 检查用户自拍验证状态
+  const checkSelfieVerification = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('selfie_verified')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setUserSelfieVerified(data?.selfie_verified || false);
+    } catch (error) {
+      console.error('Error checking selfie verification:', error);
     }
   };
 
@@ -90,11 +114,11 @@ const SheFixes = () => {
         .from('bookings')
         .select(`
           *,
-          technician:technicians(name, photo_url, rating)
+          technician:technicians(name, photo_url, rating, selfie_verified)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       setUserBookings(data || []);
     } catch (error) {
@@ -203,21 +227,38 @@ const SheFixes = () => {
       return;
     }
 
+    // 检查自拍验证状态
+    if (!userSelfieVerified) {
+      // 保存待提交的订单数据
+      setPendingBooking(bookingForm);
+      // 显示自拍验证模态框
+      setShowSelfieVerification(true);
+      return;
+    }
+
+    // 继续提交订单
+    await submitBooking();
+  };
+
+  // 实际提交订单
+  const submitBooking = async () => {
     setError('');
     setLoading(true);
 
     try {
+      const bookingData = pendingBooking || bookingForm;
+
       const { data, error } = await supabase
         .from('bookings')
         .insert([{
           user_id: currentUser.id,
-          service_type: bookingForm.service_type,
-          service_address: bookingForm.service_address,
-          description: bookingForm.description,
-          preferred_date: bookingForm.preferred_date,
-          preferred_time: bookingForm.preferred_time,
+          service_type: bookingData.service_type,
+          service_address: bookingData.service_address,
+          description: bookingData.description,
+          preferred_date: bookingData.preferred_date,
+          preferred_time: bookingData.preferred_time,
           status: 'pending',
-          photo_url: bookingForm.photo_url
+          photo_url: bookingData.photo_url
         }])
         .select();
 
@@ -232,12 +273,24 @@ const SheFixes = () => {
         preferred_time: '',
         photo_url: null
       });
+      setPendingBooking(null);
       setCurrentPage('dashboard');
       await fetchUserBookings(currentUser.id);
     } catch (error) {
       setError(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 自拍验证完成回调
+  const handleSelfieVerificationComplete = async (photoUrl) => {
+    setUserSelfieVerified(true);
+    setShowSelfieVerification(false);
+
+    // 如果有待提交的订单，现在提交它
+    if (pendingBooking) {
+      await submitBooking();
     }
   };
 
@@ -768,9 +821,18 @@ const SheFixes = () => {
                     <p className="text-gray-700 mb-4">{booking.description}</p>
                     {booking.technician && (
                       <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg mb-4">
-                        <div className="text-3xl">👩‍🔧</div>
+                        <div className="relative">
+                          <div className="text-3xl">👩‍🔧</div>
+                          {booking.technician.selfie_verified && (
+                            <div className="absolute -bottom-1 -right-1">
+                              <VerifiedBadge size="sm" region={region} />
+                            </div>
+                          )}
+                        </div>
                         <div className="flex-1">
-                          <p className="font-semibold">{booking.technician.name}</p>
+                          <p className="font-semibold flex items-center gap-2">
+                            {booking.technician.name}
+                          </p>
                           <div className="flex items-center gap-1">
                             <Star className="text-yellow-400 fill-yellow-400" size={16} />
                             <span className="text-sm">{booking.technician.rating}</span>
@@ -916,6 +978,20 @@ const SheFixes = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 自拍验证模态框 */}
+      {showSelfieVerification && currentUser && (
+        <SelfieVerification
+          userId={currentUser.id}
+          userType="user"
+          region={region}
+          onVerificationComplete={handleSelfieVerificationComplete}
+          onClose={() => {
+            setShowSelfieVerification(false);
+            setPendingBooking(null);
+          }}
+        />
       )}
 
       {/* Footer */}
