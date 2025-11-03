@@ -835,6 +835,7 @@ const SheFixes = () => {
                   { key: 'gutter_cleaning', icon: '🚿' },
                   { key: 'auto_repair', icon: '🚗' },
                   { key: 'pet_care', icon: '🐾' },
+                  { key: 'other', icon: '🛠️' },
                 ].map(({ key, icon }) => (
                   <div
                     key={key}
@@ -919,38 +920,6 @@ const SheFixes = () => {
                     {region === 'us'
                       ? 'Enjoy quality service and leave a review'
                       : '享受优质服务并留下评价'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Section */}
-          <div className="py-16 px-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white">
-            <div className="max-w-6xl mx-auto">
-              <div className="grid md:grid-cols-4 gap-8 text-center">
-                <div>
-                  <div className="text-5xl font-bold mb-2">5000+</div>
-                  <p className="text-pink-100">
-                    {region === 'us' ? 'Happy Clients' : '满意客户'}
-                  </p>
-                </div>
-                <div>
-                  <div className="text-5xl font-bold mb-2">500+</div>
-                  <p className="text-pink-100">
-                    {region === 'us' ? 'Verified Technicians' : '认证技师'}
-                  </p>
-                </div>
-                <div>
-                  <div className="text-5xl font-bold mb-2">15+</div>
-                  <p className="text-pink-100">
-                    {region === 'us' ? 'Service Categories' : '服务类别'}
-                  </p>
-                </div>
-                <div>
-                  <div className="text-5xl font-bold mb-2">4.9</div>
-                  <p className="text-pink-100">
-                    {region === 'us' ? 'Average Rating' : '平均评分'}
                   </p>
                 </div>
               </div>
