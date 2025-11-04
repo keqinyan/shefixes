@@ -862,7 +862,7 @@ const SheFixes = () => {
                   <p className="text-gray-600">
                     {region === 'us'
                       ? 'Non-profit platform connecting women. Price and details are negotiable between parties. Our mission: helping women thrive together'
-                      : '公益性质平台，只提供沟通桥梁。价格、时间可双方协商。初心：帮助女性都过得更好'}
+                      : '公益性质平台，只提供沟通桥梁。价格、时间可双方协商。初心：帮助女性都过得更好。'}
                   </p>
                 </div>
               </div>
@@ -886,16 +886,8 @@ const SheFixes = () => {
                       <span className="text-pink-500 font-bold">•</span>
                       <span>
                         {region === 'us'
-                          ? 'Price, time, and tool costs are negotiable between both parties. You can also switch to other platforms for communication.'
-                          : '具体的价格、时间以及各种工具的损耗和使用双方可以自行协商。如果双方愿意转到别的平台联系也可以。'}
-                      </span>
-                    </p>
-                    <p className="flex items-start gap-2">
-                      <span className="text-pink-500 font-bold">•</span>
-                      <span>
-                        {region === 'us'
-                          ? 'This policy will remain even if we add paid features in the future. Our mission is to help all women thrive together.'
-                          : '这一条即使付费后也不会取消，因为做这个平台的初衷就是希望能帮助女性都过得更好。'}
+                          ? 'Price, time, and tool costs are negotiable between both parties. You can also switch to other platforms for communication. This policy will remain even if we add paid features in the future. Our mission is to help all women thrive together.'
+                          : '具体的价格、时间以及各种工具的损耗和使用双方可以自行协商。如果双方愿意转到别的平台联系也可以。这一条即使付费后也不会取消，因为做这个平台的初衷就是希望能帮助女性都过得更好。'}
                       </span>
                     </p>
                     <p className="flex items-start gap-2">
