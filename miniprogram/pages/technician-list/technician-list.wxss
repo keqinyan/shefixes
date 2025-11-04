@@ -1,0 +1,103 @@
+/* miniprogram/pages/technician-list/technician-list.wxss */
+.technician-list-container {
+  min-height: 100vh;
+  background-color: #f3f4f6;
+}
+
+.page-header {
+  background-color: #ffffff;
+  padding: 32rpx;
+}
+
+.page-title {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.filter-bar {
+  background-color: #ffffff;
+  padding: 24rpx 32rpx;
+  margin-bottom: 16rpx;
+  border-bottom: 1rpx solid #e5e7eb;
+}
+
+.filter-item {
+  padding: 16rpx 24rpx;
+  background-color: #f3f4f6;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  color: #374151;
+}
+
+.technicians-list {
+  padding: 24rpx 32rpx;
+}
+
+.technician-card {
+  display: flex;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.technician-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 12rpx;
+  margin-right: 24rpx;
+}
+
+.technician-info {
+  flex: 1;
+}
+
+.technician-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.technician-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #111827;
+  margin-right: 12rpx;
+}
+
+.verified-badge {
+  background-color: #dcfce7;
+  color: #15803d;
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+.technician-skills {
+  display: block;
+  font-size: 26rpx;
+  color: #6b7280;
+  margin-bottom: 12rpx;
+}
+
+.technician-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.meta-item {
+  font-size: 24rpx;
+  color: #9ca3af;
+}
+
+.technician-bio {
+  display: block;
+  font-size: 24rpx;
+  color: #6b7280;
+  line-height: 1.6;
+}

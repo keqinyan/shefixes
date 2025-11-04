@@ -1,0 +1,122 @@
+<!--miniprogram/pages/booking/booking.wxml-->
+<view class="booking-container">
+  <view class="page-header">
+    <text class="page-title">预约服务</text>
+  </view>
+
+  <!-- 实名认证提示（未认证时显示） -->
+  <view class="realname-alert" wx:if="{{!isRealnameVerified}}">
+    <view class="alert-content">
+      <image class="alert-icon" src="/images/warning.png" mode="aspectFit"></image>
+      <view class="alert-text">
+        <text class="alert-title">需要实名认证</text>
+        <text class="alert-desc">为保障服务安全，预约前需完成实名认证</text>
+      </view>
+    </view>
+    <button class="btn-verify" bindtap="handleRealnameVerify">去认证</button>
+  </view>
+
+  <view class="booking-form" wx:else>
+    <!-- 服务类型 -->
+    <view class="form-group">
+      <text class="form-label">服务类型</text>
+      <picker
+        mode="selector"
+        range="{{serviceTypes}}"
+        value="{{serviceTypeIndex}}"
+        bindchange="onServiceTypeChange"
+      >
+        <view class="picker">
+          {{serviceTypes[serviceTypeIndex] || '请选择服务类型'}}
+        </view>
+      </picker>
+    </view>
+
+    <!-- 问题描述 -->
+    <view class="form-group">
+      <text class="form-label">问题描述</text>
+      <textarea
+        class="textarea-field"
+        placeholder="请详细描述需要维修的问题"
+        value="{{description}}"
+        bindinput="onDescriptionInput"
+        maxlength="500"
+      ></textarea>
+      <text class="char-count">{{description.length}}/500</text>
+    </view>
+
+    <!-- 预约日期 -->
+    <view class="form-group">
+      <text class="form-label">预约日期</text>
+      <picker
+        mode="date"
+        value="{{date}}"
+        start="{{minDate}}"
+        bindchange="onDateChange"
+      >
+        <view class="picker">
+          {{date || '请选择日期'}}
+        </view>
+      </picker>
+    </view>
+
+    <!-- 预约时间 -->
+    <view class="form-group">
+      <text class="form-label">预约时间</text>
+      <picker
+        mode="time"
+        value="{{time}}"
+        bindchange="onTimeChange"
+      >
+        <view class="picker">
+          {{time || '请选择时间'}}
+        </view>
+      </picker>
+    </view>
+
+    <!-- 服务地址 -->
+    <view class="form-group">
+      <text class="form-label">服务地址</text>
+      <textarea
+        class="textarea-field"
+        placeholder="请输入详细地址"
+        value="{{address}}"
+        bindinput="onAddressInput"
+        maxlength="200"
+      ></textarea>
+    </view>
+
+    <!-- 联系电话 -->
+    <view class="form-group">
+      <text class="form-label">联系电话</text>
+      <input
+        class="input-field"
+        type="number"
+        placeholder="请输入联系电话"
+        value="{{phone}}"
+        bindinput="onPhoneInput"
+      />
+    </view>
+
+    <!-- 紧急程度 -->
+    <view class="form-group">
+      <text class="form-label">紧急程度</text>
+      <radio-group bindchange="onUrgencyChange">
+        <label class="radio-item" wx:for="{{urgencyLevels}}" wx:key="value">
+          <radio value="{{item.value}}" checked="{{urgency === item.value}}" />
+          <text class="radio-label">{{item.label}}</text>
+        </label>
+      </radio-group>
+    </view>
+
+    <!-- 提交按钮 -->
+    <button
+      class="btn-submit"
+      bindtap="handleSubmit"
+      loading="{{isSubmitting}}"
+      disabled="{{!canSubmit}}"
+    >
+      提交预约
+    </button>
+  </view>
+</view>

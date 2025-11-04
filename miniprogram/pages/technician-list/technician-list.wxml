@@ -1,0 +1,54 @@
+<!--miniprogram/pages/technician-list/technician-list.wxml-->
+<view class="technician-list-container">
+  <view class="page-header">
+    <text class="page-title">技师列表</text>
+  </view>
+
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <picker
+      mode="selector"
+      range="{{cities}}"
+      value="{{cityIndex}}"
+      bindchange="onCityChange"
+    >
+      <view class="filter-item">
+        <text>城市: {{cities[cityIndex]}}</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 技师列表 -->
+  <view class="loading-container" wx:if="{{isLoading}}">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view class="technicians-list" wx:else>
+    <view
+      class="technician-card"
+      wx:for="{{technicians}}"
+      wx:key="id"
+    >
+      <image class="technician-avatar" src="{{item.avatar || '/images/avatar-default.png'}}" mode="aspectFill"></image>
+      <view class="technician-info">
+        <view class="technician-header">
+          <text class="technician-name">{{item.name}}</text>
+          <view class="verified-badge" wx:if="{{item.realname_verified}}">
+            <text>✓ 已认证</text>
+          </view>
+        </view>
+        <text class="technician-skills">{{item.skills || '维修专家'}}</text>
+        <view class="technician-meta">
+          <text class="meta-item">📍 {{item.city}}</text>
+          <text class="meta-item">⭐ {{item.rating || '5.0'}}</text>
+          <text class="meta-item">💼 {{item.experience || '3'}}年经验</text>
+        </view>
+        <text class="technician-bio" wx:if="{{item.bio}}">{{item.bio}}</text>
+      </view>
+    </view>
+
+    <view class="empty-container" wx:if="{{technicians.length === 0}}">
+      <text class="empty-text">该城市暂无技师</text>
+    </view>
+  </view>
+</view>

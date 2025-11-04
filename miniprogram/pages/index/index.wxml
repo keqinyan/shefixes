@@ -1,0 +1,80 @@
+<!--miniprogram/pages/index/index.wxml-->
+<view class="index-container">
+  <!-- 顶部横幅 -->
+  <view class="banner">
+    <view class="banner-content">
+      <text class="banner-title">SheFixes</text>
+      <text class="banner-subtitle">女性专属维修服务平台</text>
+    </view>
+    <image class="banner-bg" src="/images/banner-bg.png" mode="aspectFill"></image>
+  </view>
+
+  <!-- 服务分类 -->
+  <view class="services-section">
+    <view class="section-header">
+      <text class="section-title">服务分类</text>
+    </view>
+    <view class="services-grid">
+      <view
+        class="service-item"
+        wx:for="{{services}}"
+        wx:key="id"
+        bindtap="onServiceTap"
+        data-service="{{item.name}}"
+      >
+        <view class="service-icon-wrapper">
+          <image class="service-icon" src="{{item.icon}}" mode="aspectFit"></image>
+        </view>
+        <text class="service-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 推荐技师 -->
+  <view class="technicians-section">
+    <view class="section-header">
+      <text class="section-title">推荐技师</text>
+      <text class="see-all" bindtap="goToTechnicianList">查看全部 ></text>
+    </view>
+
+    <view class="loading-container" wx:if="{{isLoading}}">
+      <text class="loading-text">加载中...</text>
+    </view>
+
+    <view class="technicians-list" wx:else>
+      <view
+        class="technician-card"
+        wx:for="{{technicians}}"
+        wx:key="id"
+        bindtap="onTechnicianTap"
+        data-id="{{item.id}}"
+      >
+        <image class="technician-avatar" src="{{item.avatar || '/images/avatar-default.png'}}" mode="aspectFill"></image>
+        <view class="technician-info">
+          <view class="technician-header">
+            <text class="technician-name">{{item.name}}</text>
+            <view class="verified-badge" wx:if="{{item.realname_verified}}">
+              <text>✓</text>
+            </view>
+          </view>
+          <text class="technician-skills">{{item.skills || '维修专家'}}</text>
+          <view class="technician-meta">
+            <text class="technician-city">📍 {{item.city}}</text>
+            <text class="technician-rating">⭐ {{item.rating || '5.0'}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="empty-container" wx:if="{{technicians.length === 0}}">
+        <text class="empty-text">暂无技师信息</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 快速预约按钮 -->
+  <view class="quick-booking">
+    <button class="btn-quick-booking" bindtap="goToBooking">
+      <text>立即预约服务</text>
+    </button>
+  </view>
+</view>

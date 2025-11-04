@@ -1,0 +1,152 @@
+/* miniprogram/pages/booking/booking.wxss */
+.booking-container {
+  min-height: 100vh;
+  background-color: #f3f4f6;
+  padding: 32rpx;
+}
+
+.page-header {
+  margin-bottom: 32rpx;
+}
+
+.page-title {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* 实名认证提示 */
+.realname-alert {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 32rpx;
+  border-left: 8rpx solid #f59e0b;
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.alert-icon {
+  width: 48rpx;
+  height: 48rpx;
+  margin-right: 16rpx;
+}
+
+.alert-text {
+  flex: 1;
+}
+
+.alert-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8rpx;
+}
+
+.alert-desc {
+  display: block;
+  font-size: 26rpx;
+  color: #6b7280;
+}
+
+.btn-verify {
+  width: 100%;
+  background-color: #6366f1;
+  color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.btn-verify::after {
+  border: none;
+}
+
+/* 预约表单 */
+.booking-form {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+}
+
+.form-group {
+  margin-bottom: 32rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12rpx;
+}
+
+.picker {
+  padding: 24rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  color: #111827;
+  background-color: #ffffff;
+}
+
+.textarea-field {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 24rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  background-color: #ffffff;
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 24rpx;
+  color: #9ca3af;
+  margin-top: 8rpx;
+}
+
+/* 单选按钮 */
+.radio-item {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 48rpx;
+  margin-bottom: 16rpx;
+}
+
+.radio-label {
+  margin-left: 12rpx;
+  font-size: 28rpx;
+  color: #374151;
+}
+
+/* 提交按钮 */
+.btn-submit {
+  width: 100%;
+  background-color: #6366f1;
+  color: #ffffff;
+  border-radius: 12rpx;
+  padding: 28rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-top: 48rpx;
+  border: none;
+}
+
+.btn-submit::after {
+  border: none;
+}
+
+.btn-submit[disabled] {
+  background-color: #d1d5db;
+  color: #9ca3af;
+}

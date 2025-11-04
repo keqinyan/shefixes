@@ -1,0 +1,140 @@
+/* miniprogram/pages/login/login.wxss */
+.login-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 80rpx 48rpx;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 96rpx;
+}
+
+.logo {
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: 32rpx;
+}
+
+.app-name {
+  display: block;
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 16rpx;
+}
+
+.app-slogan {
+  display: block;
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.login-content {
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  padding: 48rpx 32rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+/* 微信登录部分 */
+.wechat-login-section {
+  margin-bottom: 48rpx;
+}
+
+.btn-wechat-login {
+  background-color: #07c160;
+  color: #ffffff;
+  border-radius: 12rpx;
+  padding: 28rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+
+.btn-wechat-login::after {
+  border: none;
+}
+
+.wechat-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 16rpx;
+}
+
+.login-tips {
+  text-align: center;
+  margin-top: 16rpx;
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #9ca3af;
+}
+
+/* 分隔线 */
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 48rpx 0;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1rpx;
+  background-color: #e5e7eb;
+}
+
+.divider-text {
+  padding: 0 24rpx;
+  font-size: 24rpx;
+  color: #9ca3af;
+}
+
+/* 邮箱登录部分 */
+.email-login-section {
+  margin-bottom: 32rpx;
+}
+
+.btn-email-login {
+  width: 100%;
+  background-color: #6366f1;
+  color: #ffffff;
+  border-radius: 12rpx;
+  padding: 28rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-top: 32rpx;
+  border: none;
+}
+
+.btn-email-login::after {
+  border: none;
+}
+
+.btn-email-login[disabled] {
+  background-color: #d1d5db;
+  color: #9ca3af;
+}
+
+/* 注册部分 */
+.register-section {
+  text-align: center;
+  padding-top: 32rpx;
+  border-top: 1rpx solid #e5e7eb;
+}
+
+.register-text {
+  font-size: 28rpx;
+  color: #6b7280;
+}
+
+.register-link {
+  font-size: 28rpx;
+  color: #6366f1;
+  font-weight: 600;
+  margin-left: 8rpx;
+}

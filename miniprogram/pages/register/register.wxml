@@ -1,0 +1,121 @@
+<!--miniprogram/pages/register/register.wxml-->
+<view class="register-container">
+  <view class="register-header">
+    <text class="page-title">注册账号</text>
+    <text class="page-subtitle">加入 SheFixes 女性维修服务平台</text>
+  </view>
+
+  <view class="register-content">
+    <!-- 微信信息展示（如果来自微信登录） -->
+    <view class="wechat-info" wx:if="{{fromWechat}}">
+      <image class="avatar" src="{{wechatAvatar}}" mode="aspectFill"></image>
+      <text class="nickname">{{wechatNickname}}</text>
+      <view class="verified-badge">
+        <text>✓ 微信认证</text>
+      </view>
+    </view>
+
+    <!-- 注册表单 -->
+    <view class="form-section">
+      <view class="input-group">
+        <text class="input-label">姓名 *</text>
+        <input
+          class="input-field"
+          type="text"
+          placeholder="请输入真实姓名"
+          value="{{name}}"
+          bindinput="onNameInput"
+        />
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">邮箱 *</text>
+        <input
+          class="input-field"
+          type="text"
+          placeholder="请输入邮箱"
+          value="{{email}}"
+          bindinput="onEmailInput"
+        />
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">密码 *</text>
+        <input
+          class="input-field"
+          type="password"
+          placeholder="至少6位字符"
+          value="{{password}}"
+          bindinput="onPasswordInput"
+        />
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">手机号 *</text>
+        <input
+          class="input-field"
+          type="number"
+          placeholder="请输入手机号"
+          value="{{phone}}"
+          bindinput="onPhoneInput"
+        />
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">所在城市 *</text>
+        <input
+          class="input-field"
+          type="text"
+          placeholder="例如：北京"
+          value="{{city}}"
+          bindinput="onCityInput"
+        />
+      </view>
+
+      <!-- 实名认证选项 -->
+      <view class="realname-section">
+        <view class="section-header">
+          <text class="section-title">实名认证</text>
+          <text class="required-badge">必填</text>
+        </view>
+        <text class="section-desc">为保障平台安全，需要进行实名认证</text>
+
+        <view class="realname-status">
+          <view class="status-item" wx:if="{{!realnameVerified}}">
+            <image class="status-icon" src="/images/warning.png" mode="aspectFit"></image>
+            <text class="status-text">未认证</text>
+          </view>
+          <view class="status-item verified" wx:else>
+            <image class="status-icon" src="/images/check.png" mode="aspectFit"></image>
+            <text class="status-text success">已通过微信实名认证</text>
+          </view>
+        </view>
+
+        <button
+          class="btn-realname"
+          wx:if="{{!realnameVerified}}"
+          bindtap="handleRealnameVerify"
+          loading="{{isVerifying}}"
+        >
+          开始实名认证
+        </button>
+      </view>
+
+      <!-- 注册按钮 -->
+      <button
+        class="btn-register"
+        bindtap="handleRegister"
+        loading="{{isLoading}}"
+        disabled="{{!canRegister}}"
+      >
+        注册
+      </button>
+
+      <!-- 已有账号 -->
+      <view class="login-section">
+        <text class="login-text">已有账号？</text>
+        <text class="login-link" bindtap="goToLogin">立即登录</text>
+      </view>
+    </view>
+  </view>
+</view>

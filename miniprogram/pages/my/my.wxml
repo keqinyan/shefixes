@@ -1,0 +1,59 @@
+<!--miniprogram/pages/my/my.wxml-->
+<view class="my-container">
+  <!-- 用户信息卡片 -->
+  <view class="user-card">
+    <view class="user-header">
+      <image class="user-avatar" src="{{userInfo.wechat_avatar || '/images/avatar-default.png'}}" mode="aspectFill"></image>
+      <view class="user-info">
+        <text class="user-name">{{userInfo.name || '未登录'}}</text>
+        <text class="user-phone">{{userInfo.phone}}</text>
+        <view class="verified-status" wx:if="{{userInfo.realname_verified}}">
+          <text class="verified-text">✓ 已实名认证</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 我的预约 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">我的预约</text>
+    </view>
+
+    <view class="loading-container" wx:if="{{isLoading}}">
+      <text class="loading-text">加载中...</text>
+    </view>
+
+    <view class="bookings-list" wx:else>
+      <view
+        class="booking-card"
+        wx:for="{{bookings}}"
+        wx:key="id"
+      >
+        <view class="booking-header">
+          <text class="booking-service">{{item.service_type}}</text>
+          <view class="booking-status {{item.status}}">
+            <text>{{statusMap[item.status]}}</text>
+          </view>
+        </view>
+        <text class="booking-desc">{{item.description}}</text>
+        <view class="booking-meta">
+          <text class="meta-item">📅 {{item.scheduled_date}} {{item.scheduled_time}}</text>
+          <text class="meta-item">📍 {{item.address}}</text>
+        </view>
+      </view>
+
+      <view class="empty-container" wx:if="{{bookings.length === 0}}">
+        <text class="empty-text">暂无预约记录</text>
+        <button class="btn-booking" bindtap="goToBooking">立即预约</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能菜单 -->
+  <view class="menu-section">
+    <view class="menu-item" bindtap="handleLogout">
+      <text class="menu-text">退出登录</text>
+    </view>
+  </view>
+</view>

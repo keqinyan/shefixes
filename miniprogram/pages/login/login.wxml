@@ -1,0 +1,73 @@
+<!--miniprogram/pages/login/login.wxml-->
+<view class="login-container">
+  <view class="login-header">
+    <image class="logo" src="/images/logo.png" mode="aspectFit"></image>
+    <text class="app-name">SheFixes</text>
+    <text class="app-slogan">女性专属维修服务平台</text>
+  </view>
+
+  <view class="login-content">
+    <!-- 微信一键登录 -->
+    <view class="wechat-login-section">
+      <button
+        class="btn-wechat-login"
+        type="primary"
+        bindtap="handleWechatLogin"
+        loading="{{isLoading}}"
+      >
+        <image class="wechat-icon" src="/images/wechat-icon.png" mode="aspectFit"></image>
+        微信一键登录
+      </button>
+      <view class="login-tips">
+        <text class="tip-text">使用微信账号快速登录</text>
+      </view>
+    </view>
+
+    <!-- 分隔线 -->
+    <view class="divider">
+      <view class="divider-line"></view>
+      <text class="divider-text">或使用邮箱登录</text>
+      <view class="divider-line"></view>
+    </view>
+
+    <!-- 邮箱登录表单 -->
+    <view class="email-login-section">
+      <view class="input-group">
+        <text class="input-label">邮箱</text>
+        <input
+          class="input-field"
+          type="text"
+          placeholder="请输入邮箱"
+          value="{{email}}"
+          bindinput="onEmailInput"
+        />
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">密码</text>
+        <input
+          class="input-field"
+          type="password"
+          placeholder="请输入密码"
+          value="{{password}}"
+          bindinput="onPasswordInput"
+        />
+      </view>
+
+      <button
+        class="btn-email-login"
+        bindtap="handleEmailLogin"
+        loading="{{isEmailLoading}}"
+        disabled="{{!email || !password}}"
+      >
+        登录
+      </button>
+    </view>
+
+    <!-- 注册链接 -->
+    <view class="register-section">
+      <text class="register-text">还没有账号？</text>
+      <text class="register-link" bindtap="goToRegister">立即注册</text>
+    </view>
+  </view>
+</view>
