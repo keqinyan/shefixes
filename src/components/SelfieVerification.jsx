@@ -25,10 +25,10 @@ const SelfieVerification = ({ userId, userType = 'user', onVerificationComplete,
   const texts = {
     us: {
       title: 'Selfie Verification',
-      description: 'To ensure safety for both technicians and customers, we use secure selfie verification. Your photo is only used for identity confirmation and will not be publicly displayed.',
+      description: '🔒 Privacy First: Your selfie is stored securely in a private folder accessible ONLY by admins. After verification (usually within 24 hours), your photo will be AUTOMATICALLY DELETED. It will never be publicly accessible or permanently stored.',
       startCamera: 'Start Camera',
       retake: 'Retake',
-      confirm: 'Confirm & Upload',
+      confirm: 'Submit for Review',
       cancel: 'Cancel',
       captureSelfie: 'Capture Selfie',
       errors: {
@@ -37,17 +37,17 @@ const SelfieVerification = ({ userId, userType = 'user', onVerificationComplete,
         uploadFailed: 'Failed to upload selfie. Please try again.',
         verificationFailed: 'Failed to update verification status. Please try again.'
       },
-      success: 'Selfie verified successfully!',
+      success: 'Selfie submitted! Pending admin review (usually within 24h). You will be notified once approved.',
       cameraReady: 'Position your face in the frame and take a selfie',
       previewTitle: 'Preview your selfie',
       previewDescription: 'Make sure your face is clearly visible'
     },
     cn: {
       title: '自拍验证',
-      description: '为了让技师和客户都更安心，我们采用安全自拍验证。您的照片只用于身份确认，不会公开展示。',
+      description: '🔒 隐私优先：您的自拍照片将安全存储在仅管理员可访问的私密文件夹中。审核通过后（通常24小时内），照片会自动删除。绝不会公开展示或永久保存。',
       startCamera: '开启相机',
       retake: '重新拍摄',
-      confirm: '确认上传',
+      confirm: '提交审核',
       cancel: '取消',
       captureSelfie: '拍摄自拍',
       errors: {
@@ -56,7 +56,7 @@ const SelfieVerification = ({ userId, userType = 'user', onVerificationComplete,
         uploadFailed: '上传自拍失败，请重试。',
         verificationFailed: '更新验证状态失败，请重试。'
       },
-      success: '自拍验证成功！',
+      success: '自拍已提交！等待管理员审核（通常24小时内）。审核通过后会通知您。',
       cameraReady: '将您的面部放在框内并拍摄自拍',
       previewTitle: '预览您的自拍',
       previewDescription: '请确保面部清晰可见'
@@ -146,10 +146,11 @@ const SelfieVerification = ({ userId, userType = 'user', onVerificationComplete,
     setError('');
 
     try {
-      // 1. 上传到 Supabase Storage
-      const fileName = `${userType}_${userId}_${Date.now()}.jpg`;
+      // 1. 上传到 Supabase Storage（私有bucket，仅管理员可访问）
+      // 文件名包含临时标记，审核后会自动删除
+      const fileName = `pending/${userType}_${userId}_${Date.now()}.jpg`;
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('selfie-verifications')
+        .from('selfie-verifications-private')  // 使用私有 bucket
         .upload(fileName, capturedImage, {
           contentType: 'image/jpeg',
           upsert: true
@@ -157,21 +158,19 @@ const SelfieVerification = ({ userId, userType = 'user', onVerificationComplete,
 
       if (uploadError) throw uploadError;
 
-      // 2. 获取公开 URL
-      const { data: urlData } = supabase.storage
-        .from('selfie-verifications')
-        .getPublicUrl(fileName);
-
-      const photoUrl = urlData.publicUrl;
+      // 2. 不获取公开URL，只存储文件路径（仅管理员可访问）
+      const filePath = fileName;
 
       // 3. 更新用户/技师表的验证状态
+      // 状态设为 'pending'，等待管理员审核
       const tableName = userType === 'user' ? 'users' : 'technicians';
       const { error: updateError } = await supabase
         .from(tableName)
         .update({
-          selfie_verified: true,
-          selfie_photo_url: photoUrl,
-          selfie_verified_at: new Date().toISOString()
+          selfie_verified: false,  // 等待审核
+          selfie_file_path: filePath,  // 只存储路径，不存储公开URL
+          selfie_submitted_at: new Date().toISOString(),
+          verification_status: 'pending'  // 审核状态：pending, approved, rejected
         })
         .eq('id', userId);
 
@@ -181,7 +180,7 @@ const SelfieVerification = ({ userId, userType = 'user', onVerificationComplete,
 
       // 2秒后回调并关闭
       setTimeout(() => {
-        onVerificationComplete && onVerificationComplete(photoUrl);
+        onVerificationComplete && onVerificationComplete(filePath);
       }, 2000);
 
     } catch (err) {
