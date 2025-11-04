@@ -717,7 +717,7 @@ const SheFixes = () => {
           rate: 'Hourly Rate',
           approve: 'Approve',
           reject: 'Reject',
-          noP ending: 'No pending technicians'
+          noPending: 'No pending technicians'
         },
         reports: {
           title: 'Reports',
