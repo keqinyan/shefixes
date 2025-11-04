@@ -711,6 +711,8 @@ const SheFixes = () => {
             <Wrench className="text-pink-500" size={28} />
             <span className="text-2xl font-bold">SheFixes</span>
           </div>
+
+          {/* 桌面端菜单 */}
           <div className="hidden md:flex items-center gap-6">
             <button onClick={() => setCurrentPage('home')} className="hover:text-pink-500">{c.nav.home}</button>
             <button onClick={() => setCurrentPage('booking')} className="hover:text-pink-500">{c.nav.booking}</button>
@@ -728,7 +730,68 @@ const SheFixes = () => {
               <Globe size={20} />
             </button>
           </div>
+
+          {/* 移动端菜单按钮和语言切换 */}
+          <div className="flex md:hidden items-center gap-4">
+            <button
+              onClick={() => setRegion(region === 'us' ? 'cn' : 'us')}
+              className="hover:text-pink-500"
+              aria-label="Switch Language"
+            >
+              <Globe size={24} />
+            </button>
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="hover:text-pink-500"
+              aria-label="Toggle Menu"
+            >
+              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
+          </div>
         </div>
+
+        {/* 移动端下拉菜单 */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
+            <div className="flex flex-col py-2">
+              <button
+                onClick={() => { setCurrentPage('home'); setIsMenuOpen(false); }}
+                className="px-4 py-3 text-left hover:bg-pink-50 hover:text-pink-500"
+              >
+                {c.nav.home}
+              </button>
+              <button
+                onClick={() => { setCurrentPage('booking'); setIsMenuOpen(false); }}
+                className="px-4 py-3 text-left hover:bg-pink-50 hover:text-pink-500"
+              >
+                {c.nav.booking}
+              </button>
+              {currentUser ? (
+                <>
+                  <button
+                    onClick={() => { setCurrentPage('dashboard'); setIsMenuOpen(false); }}
+                    className="px-4 py-3 text-left hover:bg-pink-50 hover:text-pink-500"
+                  >
+                    {c.nav.dashboard}
+                  </button>
+                  <button
+                    onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                    className="px-4 py-3 text-left hover:bg-pink-50 hover:text-pink-500 flex items-center gap-2"
+                  >
+                    <LogOut size={18} />{c.nav.logout}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => { setCurrentPage('auth'); setIsMenuOpen(false); }}
+                  className="px-4 py-3 text-left hover:bg-pink-50 hover:text-pink-500"
+                >
+                  {c.nav.login}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* 主页 */}
