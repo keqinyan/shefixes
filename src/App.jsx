@@ -69,6 +69,12 @@ const SheFixes = () => {
   const [userSelfieVerified, setUserSelfieVerified] = useState(false);
   const [pendingBooking, setPendingBooking] = useState(null);
 
+  // 管理员数据
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingTechnicians, setPendingTechnicians] = useState([]);
+  const [pendingReports, setPendingReports] = useState([]);
+  const [adminTab, setAdminTab] = useState('technicians'); // 'technicians', 'reports', 'users'
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -95,11 +101,115 @@ const SheFixes = () => {
       if (user) {
         await fetchUserBookings(user.id);
         await checkSelfieVerification(user.id);
+        await checkAdminStatus(user.id);
       }
     } catch (error) {
       console.error('Error checking user:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 检查用户是否为管理员
+  const checkAdminStatus = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      const adminStatus = data?.is_admin || false;
+      setIsAdmin(adminStatus);
+
+      if (adminStatus) {
+        await fetchPendingTechnicians();
+        await fetchPendingReports();
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
+
+  // 获取待审核技师列表
+  const fetchPendingTechnicians = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('technicians')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPendingTechnicians(data || []);
+    } catch (error) {
+      console.error('Error fetching pending technicians:', error);
+    }
+  };
+
+  // 获取待处理举报
+  const fetchPendingReports = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPendingReports(data || []);
+    } catch (error) {
+      console.error('Error fetching pending reports:', error);
+    }
+  };
+
+  // 审核技师（通过或拒绝）
+  const handleTechnicianApproval = async (technicianId, approved) => {
+    try {
+      const newStatus = approved ? 'approved' : 'rejected';
+
+      const { error } = await supabase
+        .from('technicians')
+        .update({
+          status: newStatus,
+          verified: approved
+        })
+        .eq('id', technicianId);
+
+      if (error) throw error;
+
+      alert(region === 'us'
+        ? (approved ? 'Technician approved!' : 'Technician rejected.')
+        : (approved ? '技师已批准！' : '技师已拒绝。'));
+
+      await fetchPendingTechnicians();
+    } catch (error) {
+      console.error('Error approving technician:', error);
+      alert(region === 'us' ? 'Error processing approval' : '处理审核时出错');
+    }
+  };
+
+  // 处理举报
+  const handleReportAction = async (reportId, action, actionNotes) => {
+    try {
+      const { error } = await supabase
+        .from('reports')
+        .update({
+          status: action, // 'resolved' or 'dismissed'
+          admin_notes: actionNotes,
+          reviewed_by: currentUser.id,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', reportId);
+
+      if (error) throw error;
+
+      alert(region === 'us' ? 'Report updated!' : '举报已处理！');
+      await fetchPendingReports();
+    } catch (error) {
+      console.error('Error handling report:', error);
+      alert(region === 'us' ? 'Error processing report' : '处理举报时出错');
     }
   };
 
@@ -485,7 +595,7 @@ const SheFixes = () => {
   // 文本内容（简化版）
   const t = {
     us: {
-      nav: { home: 'Home', find: 'Find', dashboard: 'My Orders', login: 'Login', logout: 'Logout', booking: 'Book Service' },
+      nav: { home: 'Home', find: 'Find', dashboard: 'My Orders', admin: 'Admin Panel', login: 'Login', logout: 'Logout', booking: 'Book Service' },
       auth: {
         login: 'Login',
         registerUser: 'Register as User',
@@ -589,10 +699,40 @@ const SheFixes = () => {
         comment: 'Your Comments',
         submit: 'Submit Review',
         cancel: 'Cancel'
+      },
+      admin: {
+        title: 'Admin Panel',
+        tabs: {
+          technicians: 'Pending Technicians',
+          reports: 'Reports',
+          users: 'All Users'
+        },
+        techApproval: {
+          pending: 'Pending Approval',
+          name: 'Name',
+          email: 'Email',
+          phone: 'Phone',
+          city: 'City',
+          categories: 'Service Categories',
+          rate: 'Hourly Rate',
+          approve: 'Approve',
+          reject: 'Reject',
+          noP ending: 'No pending technicians'
+        },
+        reports: {
+          title: 'Reports',
+          reporter: 'Reporter',
+          reported: 'Reported',
+          category: 'Category',
+          reason: 'Reason',
+          resolve: 'Resolve',
+          dismiss: 'Dismiss',
+          noPending: 'No pending reports'
+        }
       }
     },
     cn: {
-      nav: { home: '首页', find: '找技师', dashboard: '我的订单', login: '登录', logout: '退出', booking: '预约服务' },
+      nav: { home: '首页', find: '找技师', dashboard: '我的订单', admin: '管理后台', login: '登录', logout: '退出', booking: '预约服务' },
       auth: {
         login: '登录',
         registerUser: '注册用户',
@@ -696,6 +836,36 @@ const SheFixes = () => {
         comment: '您的评价',
         submit: '提交评价',
         cancel: '取消'
+      },
+      admin: {
+        title: '管理后台',
+        tabs: {
+          technicians: '待审核技师',
+          reports: '举报管理',
+          users: '所有用户'
+        },
+        techApproval: {
+          pending: '待审核',
+          name: '姓名',
+          email: '邮箱',
+          phone: '手机号',
+          city: '城市',
+          categories: '服务类别',
+          rate: '时薪',
+          approve: '批准',
+          reject: '拒绝',
+          noPending: '暂无待审核技师'
+        },
+        reports: {
+          title: '举报管理',
+          reporter: '举报人',
+          reported: '被举报人',
+          category: '类别',
+          reason: '原因',
+          resolve: '处理',
+          dismiss: '驳回',
+          noPending: '暂无待处理举报'
+        }
       }
     }
   };
@@ -711,12 +881,19 @@ const SheFixes = () => {
             <Wrench className="text-pink-500" size={28} />
             <span className="text-2xl font-bold">SheFixes</span>
           </div>
+
+          {/* 桌面端导航 */}
           <div className="hidden md:flex items-center gap-6">
             <button onClick={() => setCurrentPage('home')} className="hover:text-pink-500">{c.nav.home}</button>
             <button onClick={() => setCurrentPage('booking')} className="hover:text-pink-500">{c.nav.booking}</button>
             {currentUser ? (
               <>
                 <button onClick={() => setCurrentPage('dashboard')} className="hover:text-pink-500">{c.nav.dashboard}</button>
+                {isAdmin && (
+                  <button onClick={() => setCurrentPage('admin')} className="hover:text-pink-500 flex items-center gap-1">
+                    <Shield size={18} />{c.nav.admin}
+                  </button>
+                )}
                 <button onClick={handleLogout} className="flex items-center gap-2 hover:text-pink-500">
                   <LogOut size={18} />{c.nav.logout}
                 </button>
@@ -728,7 +905,62 @@ const SheFixes = () => {
               <Globe size={20} />
             </button>
           </div>
+
+          {/* 移动端汉堡菜单按钮 */}
+          <div className="md:hidden flex items-center gap-4">
+            <button onClick={() => setRegion(region === 'us' ? 'cn' : 'us')} className="hover:text-pink-500">
+              <Globe size={20} />
+            </button>
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="hover:text-pink-500">
+              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
+          </div>
         </div>
+
+        {/* 移动端菜单下拉 */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
+            <div className="px-4 py-2 flex flex-col gap-2">
+              <button
+                onClick={() => { setCurrentPage('home'); setIsMenuOpen(false); }}
+                className="text-left py-3 px-2 hover:bg-pink-50 hover:text-pink-500 rounded">
+                {c.nav.home}
+              </button>
+              <button
+                onClick={() => { setCurrentPage('booking'); setIsMenuOpen(false); }}
+                className="text-left py-3 px-2 hover:bg-pink-50 hover:text-pink-500 rounded">
+                {c.nav.booking}
+              </button>
+              {currentUser ? (
+                <>
+                  <button
+                    onClick={() => { setCurrentPage('dashboard'); setIsMenuOpen(false); }}
+                    className="text-left py-3 px-2 hover:bg-pink-50 hover:text-pink-500 rounded">
+                    {c.nav.dashboard}
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setCurrentPage('admin'); setIsMenuOpen(false); }}
+                      className="text-left py-3 px-2 hover:bg-pink-50 hover:text-pink-500 rounded flex items-center gap-2">
+                      <Shield size={18} />{c.nav.admin}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                    className="text-left py-3 px-2 hover:bg-pink-50 hover:text-pink-500 rounded flex items-center gap-2">
+                    <LogOut size={18} />{c.nav.logout}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => { setCurrentPage('auth'); setIsMenuOpen(false); }}
+                  className="text-left py-3 px-2 hover:bg-pink-50 hover:text-pink-500 rounded">
+                  {c.nav.login}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* 主页 */}
@@ -1403,6 +1635,185 @@ const SheFixes = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 管理员页面 */}
+      {currentPage === 'admin' && currentUser && isAdmin && (
+        <div className="py-16 px-4 bg-gray-50 min-h-screen">
+          <div className="max-w-6xl mx-auto">
+            <h1 className="text-4xl font-bold mb-8 flex items-center gap-3">
+              <Shield className="text-pink-500" size={36} />
+              {c.admin.title}
+            </h1>
+
+            {/* Tab Navigation */}
+            <div className="mb-6 flex gap-4 border-b border-gray-200">
+              <button
+                onClick={() => setAdminTab('technicians')}
+                className={`pb-3 px-4 font-semibold transition ${
+                  adminTab === 'technicians'
+                    ? 'border-b-2 border-pink-500 text-pink-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}>
+                {c.admin.tabs.technicians} ({pendingTechnicians.length})
+              </button>
+              <button
+                onClick={() => setAdminTab('reports')}
+                className={`pb-3 px-4 font-semibold transition ${
+                  adminTab === 'reports'
+                    ? 'border-b-2 border-pink-500 text-pink-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}>
+                {c.admin.tabs.reports} ({pendingReports.length})
+              </button>
+            </div>
+
+            {/* Pending Technicians Tab */}
+            {adminTab === 'technicians' && (
+              <div className="space-y-4">
+                {pendingTechnicians.length === 0 ? (
+                  <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+                    <CheckCircle className="text-green-300 mx-auto mb-4" size={64} />
+                    <h3 className="text-2xl font-bold text-gray-700">
+                      {c.admin.techApproval.noPending}
+                    </h3>
+                  </div>
+                ) : (
+                  pendingTechnicians.map((tech) => (
+                    <div key={tech.id} className="bg-white rounded-2xl shadow-lg p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-xl mb-2">{tech.name}</h3>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-500">{c.admin.techApproval.email}:</span>
+                              <span className="ml-2 font-medium">{tech.email}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">{c.admin.techApproval.phone}:</span>
+                              <span className="ml-2 font-medium">{tech.phone}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">{c.admin.techApproval.city}:</span>
+                              <span className="ml-2 font-medium">{tech.city || tech.service_area?.join(', ')}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">{c.admin.techApproval.rate}:</span>
+                              <span className="ml-2 font-medium">${tech.hourly_rate}/hr</span>
+                            </div>
+                          </div>
+                          <div className="mt-3">
+                            <span className="text-gray-500 text-sm">{c.admin.techApproval.categories}:</span>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {tech.service_categories?.map((cat, idx) => (
+                                <span
+                                  key={idx}
+                                  className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm">
+                                  {c.auth.categories[cat] || cat}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          {tech.bio && (
+                            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                              <p className="text-sm text-gray-700">{tech.bio}</p>
+                            </div>
+                          )}
+                        </div>
+                        <span className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-semibold ml-4">
+                          {c.admin.techApproval.pending}
+                        </span>
+                      </div>
+                      <div className="flex gap-3 mt-6">
+                        <button
+                          onClick={() => handleTechnicianApproval(tech.id, true)}
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2">
+                          <CheckCircle size={20} />
+                          {c.admin.techApproval.approve}
+                        </button>
+                        <button
+                          onClick={() => handleTechnicianApproval(tech.id, false)}
+                          className="flex-1 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2">
+                          <X size={20} />
+                          {c.admin.techApproval.reject}
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Reports Tab */}
+            {adminTab === 'reports' && (
+              <div className="space-y-4">
+                {pendingReports.length === 0 ? (
+                  <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+                    <CheckCircle className="text-green-300 mx-auto mb-4" size={64} />
+                    <h3 className="text-2xl font-bold text-gray-700">
+                      {c.admin.reports.noPending}
+                    </h3>
+                  </div>
+                ) : (
+                  pendingReports.map((report) => (
+                    <div key={report.id} className="bg-white rounded-2xl shadow-lg p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-xl mb-3 flex items-center gap-2">
+                            <AlertCircle className="text-red-500" size={24} />
+                            {c.admin.reports.title}
+                          </h3>
+                          <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                            <div>
+                              <span className="text-gray-500">{c.admin.reports.reporter}:</span>
+                              <span className="ml-2 font-medium">{report.reporter_type} ({report.reporter_id.substring(0, 8)}...)</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">{c.admin.reports.reported}:</span>
+                              <span className="ml-2 font-medium">{report.reported_type} ({report.reported_id.substring(0, 8)}...)</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-gray-500">{c.admin.reports.category}:</span>
+                              <span className="ml-2 font-medium bg-red-100 text-red-700 px-2 py-1 rounded">
+                                {report.report_category}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <p className="text-sm font-semibold text-gray-700 mb-1">{c.admin.reports.reason}:</p>
+                            <p className="text-sm text-gray-600">{report.report_reason}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 mt-6">
+                        <button
+                          onClick={() => {
+                            const notes = prompt(region === 'us' ? 'Admin notes:' : '管理员备注:');
+                            if (notes !== null) {
+                              handleReportAction(report.id, 'resolved', notes);
+                            }
+                          }}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold">
+                          {c.admin.reports.resolve}
+                        </button>
+                        <button
+                          onClick={() => {
+                            const notes = prompt(region === 'us' ? 'Reason for dismissal:' : '驳回原因:');
+                            if (notes !== null) {
+                              handleReportAction(report.id, 'dismissed', notes);
+                            }
+                          }}
+                          className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold">
+                          {c.admin.reports.dismiss}
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
