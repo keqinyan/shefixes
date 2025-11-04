@@ -836,7 +836,7 @@ const SheFixes = () => {
                   <p className="text-gray-600">
                     {region === 'us'
                       ? 'All technicians are verified and background-checked for your safety'
-                      : '所有技师均经过身份验证和背景调查，确保您的安全'}
+                      : '所有技师均经过自拍审核（目前网站公益运营）'}
                   </p>
                 </div>
                 <div className="text-center p-6">
