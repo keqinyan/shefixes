@@ -835,8 +835,8 @@ const SheFixes = () => {
                   </h3>
                   <p className="text-gray-600">
                     {region === 'us'
-                      ? 'All technicians are verified and background-checked for your safety'
-                      : '所有技师均经过自拍审核（目前网站公益运营）'}
+                      ? 'All technicians and users are verified through selfie verification for your safety'
+                      : '所有技师和用户均经过自拍审核，确保安全'}
                   </p>
                 </div>
                 <div className="text-center p-6">
@@ -857,13 +857,56 @@ const SheFixes = () => {
                     <Star className="text-blue-500" size={40} />
                   </div>
                   <h3 className="text-xl font-bold mb-3">
-                    {region === 'us' ? 'Quality Service' : '优质服务'}
+                    {region === 'us' ? 'Community Platform' : '公益平台'}
                   </h3>
                   <p className="text-gray-600">
                     {region === 'us'
-                      ? 'Professional, skilled technicians with excellent customer reviews'
-                      : '专业熟练的技师，优质的客户评价'}
+                      ? 'Non-profit platform connecting women. Price and details are negotiable between parties. Our mission: helping women thrive together'
+                      : '公益性质平台，只提供沟通桥梁。价格、时间可双方协商。初心：帮助女性都过得更好'}
                   </p>
+                </div>
+              </div>
+
+              {/* 平台说明 */}
+              <div className="mt-12 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl p-8">
+                <div className="max-w-4xl mx-auto">
+                  <h3 className="text-2xl font-bold mb-4 text-center">
+                    {region === 'us' ? '💝 About Our Platform' : '💝 关于平台'}
+                  </h3>
+                  <div className="space-y-3 text-gray-700">
+                    <p className="flex items-start gap-2">
+                      <span className="text-pink-500 font-bold">•</span>
+                      <span>
+                        {region === 'us'
+                          ? 'This is a non-profit community platform. We only provide a communication space for connection.'
+                          : '本平台为公益性质，仅提供沟通平台，帮助双方建立联系。'}
+                      </span>
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <span className="text-pink-500 font-bold">•</span>
+                      <span>
+                        {region === 'us'
+                          ? 'Price, time, and tool costs are negotiable between both parties. You can also switch to other platforms for communication.'
+                          : '具体的价格、时间以及各种工具的损耗和使用双方可以自行协商。如果双方愿意转到别的平台联系也可以。'}
+                      </span>
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <span className="text-pink-500 font-bold">•</span>
+                      <span>
+                        {region === 'us'
+                          ? 'This policy will remain even if we add paid features in the future. Our mission is to help all women thrive together.'
+                          : '这一条即使付费后也不会取消，因为做这个平台的初衷就是希望能帮助女性都过得更好。'}
+                      </span>
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <span className="text-pink-500 font-bold">•</span>
+                      <span>
+                        {region === 'us'
+                          ? 'After service completion, both parties leave ratings and reviews for each other to build trust in our community.'
+                          : '服务结束后，双方互相留下评分以及评价，共同建设信任社区。'}
+                      </span>
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -932,58 +975,139 @@ const SheFixes = () => {
               <h2 className="text-4xl font-bold text-center mb-12">
                 {region === 'us' ? 'How It Works' : '如何使用'}
               </h2>
-              <div className="grid md:grid-cols-4 gap-8">
-                <div className="text-center">
-                  <div className="bg-pink-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                    1
+
+              {/* 用户流程 */}
+              <div className="mb-12">
+                <h3 className="text-2xl font-bold mb-6 text-pink-500">
+                  {region === 'us' ? '👤 For Users' : '👤 用户端'}
+                </h3>
+                <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6">
+                  <div className="text-center">
+                    <div className="bg-pink-500 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                      1
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">
+                      {region === 'us' ? 'Register' : '注册账号'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {region === 'us'
+                        ? 'Sign up with name, email, and phone'
+                        : '姓名、邮箱、手机号'}
+                    </p>
                   </div>
-                  <h3 className="text-xl font-bold mb-3">
-                    {region === 'us' ? 'Book Service' : '预约服务'}
-                  </h3>
-                  <p className="text-gray-600">
-                    {region === 'us'
-                      ? 'Choose your service and tell us what you need'
-                      : '选择服务类型，告诉我们您的需求'}
-                  </p>
+                  <div className="text-center">
+                    <div className="bg-pink-500 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                      2
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">
+                      {region === 'us' ? 'Selfie Verification' : '自拍审核'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {region === 'us'
+                        ? 'Take selfie before first order (camera only, for verification only, not stored)'
+                        : '下第一单前自拍（不可从相册上传，仅供审核，不储存）'}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-pink-500 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                      3
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">
+                      {region === 'us' ? 'Browse & Book' : '选择下单'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {region === 'us'
+                        ? 'Select service, enter address, view local technicians with hourly rates'
+                        : '选择服务、输入地址，查看同城技师及时薪'}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-pink-500 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                      4
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">
+                      {region === 'us' ? 'Negotiate & Connect' : '协商沟通'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {region === 'us'
+                        ? 'Discuss price, time, and details. You can also switch to other platforms'
+                        : '协商价格、时间、工具等，可转至别的平台联系'}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-pink-500 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                      5
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">
+                      {region === 'us' ? 'Review & Rate' : '评分评价'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {region === 'us'
+                        ? 'Leave rating and review after service'
+                        : '服务结束后互相留下评分评价'}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="bg-pink-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                    2
+              </div>
+
+              {/* 技师流程 */}
+              <div>
+                <h3 className="text-2xl font-bold mb-6 text-purple-500">
+                  {region === 'us' ? '👩‍🔧 For Technicians' : '👩‍🔧 技师端'}
+                </h3>
+                <div className="grid md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="bg-purple-500 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                      1
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">
+                      {region === 'us' ? 'Register with Selfie' : '注册+自拍'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {region === 'us'
+                        ? 'Fill in name, email, phone, services, tools, city, hourly rate. Must take selfie during registration (camera only, not stored)'
+                        : '姓名、邮箱、手机号、服务种类、工具、城市、时薪。注册时必须自拍（不可相册，不储存）'}
+                    </p>
                   </div>
-                  <h3 className="text-xl font-bold mb-3">
-                    {region === 'us' ? 'Get Matched' : '匹配技师'}
-                  </h3>
-                  <p className="text-gray-600">
-                    {region === 'us'
-                      ? 'We connect you with qualified technicians'
-                      : '我们为您匹配合适的专业技师'}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="bg-pink-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                    3
+                  <div className="text-center">
+                    <div className="bg-purple-500 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                      2
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">
+                      {region === 'us' ? 'Admin Approval' : '管理员审核'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {region === 'us'
+                        ? 'Wait for admin to verify your selfie and approve your account'
+                        : '等待管理员审核自拍，审核通过后可接单'}
+                    </p>
                   </div>
-                  <h3 className="text-xl font-bold mb-3">
-                    {region === 'us' ? 'Schedule Time' : '安排时间'}
-                  </h3>
-                  <p className="text-gray-600">
-                    {region === 'us'
-                      ? 'Confirm appointment time that works for you'
-                      : '确认适合您的服务时间'}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="bg-pink-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                    4
+                  <div className="text-center">
+                    <div className="bg-purple-500 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                      3
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">
+                      {region === 'us' ? 'Receive & Negotiate' : '接单协商'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {region === 'us'
+                        ? 'Receive orders, discuss price and time with customers'
+                        : '接收订单，与客户协商价格和时间'}
+                    </p>
                   </div>
-                  <h3 className="text-xl font-bold mb-3">
-                    {region === 'us' ? 'Get It Fixed' : '完成服务'}
-                  </h3>
-                  <p className="text-gray-600">
-                    {region === 'us'
-                      ? 'Enjoy quality service and leave a review'
-                      : '享受优质服务并留下评价'}
-                  </p>
+                  <div className="text-center">
+                    <div className="bg-purple-500 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                      4
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">
+                      {region === 'us' ? 'Review & Rate' : '评分评价'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {region === 'us'
+                        ? 'Leave rating and review after service'
+                        : '服务结束后互相留下评分评价'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1021,6 +1145,18 @@ const SheFixes = () => {
           <div className="max-w-3xl mx-auto">
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <h1 className="text-4xl font-bold mb-8 text-center">{c.booking.title}</h1>
+
+              {/* 平台说明 */}
+              <div className="mb-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-4">
+                <p className="text-sm text-gray-700">
+                  <span className="font-semibold text-pink-600">
+                    {region === 'us' ? '💝 Community Platform:' : '💝 公益平台：'}
+                  </span>{' '}
+                  {region === 'us'
+                    ? 'After submitting, you will see local technicians with their hourly rates. Prices, time, and details are negotiable. You can communicate on our platform or switch to other platforms.'
+                    : '提交后会显示同城技师及时薪。价格、时间、工具等可双方协商，可在平台沟通或转至其他平台联系。'}
+                </p>
+              </div>
 
               {error && (
                 <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
@@ -1207,6 +1343,23 @@ const SheFixes = () => {
               {/* 用户注册表单 */}
               {authMode === 'register-user' && (
                 <form onSubmit={handleUserRegister} className="space-y-4">
+                  {/* 自拍审核说明 */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-2">
+                      <Camera className="text-blue-500 mt-1" size={20} />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-semibold mb-1">
+                          {region === 'us' ? '📸 Selfie Verification Required' : '📸 需要自拍验证'}
+                        </p>
+                        <p>
+                          {region === 'us'
+                            ? 'Before placing your first order, you will need to take a selfie (camera only, no photo upload) for admin verification to ensure women-only access. Your selfie is for verification purposes only and will not be stored in any way.'
+                            : '下第一单前需要自拍（不允许从相册上传），经管理员审核是女性后方可下单。这个自拍仅供审核使用，不会以任何方式储存。'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-semibold mb-2">{c.auth.email}</label>
                     <input type="email" value={registerData.email}
@@ -1240,6 +1393,16 @@ const SheFixes = () => {
                         className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-500" required />
                     </div>
                   </div>
+
+                  {/* 账号安全提示 */}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-xs text-yellow-800">
+                      {region === 'us'
+                        ? '⚠️ If reported by a technician for not being the account owner, your account will be temporarily suspended pending re-verification.'
+                        : '⚠️ 一旦被技师投诉非本人账号就会暂时下线，直到重新审核完毕为止。'}
+                    </p>
+                  </div>
+
                   <button type="submit" disabled={loading}
                     className={`w-full py-3 rounded-lg font-semibold text-white ${loading ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'}`}>
                     {loading ? '...' : c.auth.registerBtn}
@@ -1250,6 +1413,23 @@ const SheFixes = () => {
               {/* 技师注册表单 */}
               {authMode === 'register-technician' && (
                 <form onSubmit={handleTechnicianRegister} className="space-y-4">
+                  {/* 技师自拍审核说明 */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-2">
+                      <Camera className="text-purple-500 mt-1" size={20} />
+                      <div className="text-sm text-purple-800">
+                        <p className="font-semibold mb-1">
+                          {region === 'us' ? '📸 Selfie Verification Required at Registration' : '📸 注册时需要自拍验证'}
+                        </p>
+                        <p>
+                          {region === 'us'
+                            ? 'During registration, you must take a selfie (camera only, no photo upload) for admin verification. Your selfie is for verification purposes only and will not be stored. If reported by a user for not being the account owner, your account will be temporarily suspended pending re-verification.'
+                            : '在注册时就必须自拍（不能由相册上传），经管理员审核后才可以拥有账号。这个自拍仅供审核使用，不会以任何方式储存。一旦被用户投诉非本人账号就会暂时下线，直到重新审核完毕为止。'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold mb-2">{c.auth.email}</label>
