@@ -50,6 +50,12 @@ const SheFixes = () => {
     photo_url: null
   });
 
+  // 技师匹配相关
+  const [bookingStep, setBookingStep] = useState(1); // 1: 填写信息, 2: 选择技师
+  const [matchedTechnicians, setMatchedTechnicians] = useState([]);
+  const [selectedTechnician, setSelectedTechnician] = useState(null);
+  const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+
   // 聊天数据
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -100,6 +106,69 @@ const SheFixes = () => {
       console.error('Error checking user:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 从地址中提取城市名称
+  const extractCityFromAddress = (address) => {
+    // 匹配常见城市模式
+    const cityPatterns = [
+      /^(.+?[市])/,  // 匹配 "北京市", "上海市" 等
+      /^(.+?[省])(.+?[市])/,  // 匹配 "江苏省南京市" 等
+      /^(.+?[自治区])(.+?[市])/,  // 匹配 "新疆维吾尔自治区乌鲁木齐市" 等
+    ];
+
+    for (const pattern of cityPatterns) {
+      const match = address.match(pattern);
+      if (match) {
+        // 返回最后一个匹配的市
+        return match[match.length - 1] || match[1];
+      }
+    }
+
+    // 简单匹配：取前面的词
+    const simpleMatch = address.match(/^([^\s,，]+)/);
+    return simpleMatch ? simpleMatch[1] : address;
+  };
+
+  // 搜索同城技师
+  const searchTechnicians = async () => {
+    setLoadingTechnicians(true);
+    setError('');
+
+    try {
+      const city = extractCityFromAddress(bookingForm.service_address);
+
+      // 查询技师
+      let query = supabase
+        .from('technicians')
+        .select('*')
+        .eq('status', 'approved')
+        .contains('service_area', [city]);
+
+      // 如果选择了服务类型，筛选匹配的技师
+      if (bookingForm.service_type) {
+        query = query.contains('service_categories', [bookingForm.service_type]);
+      }
+
+      const { data, error } = await query.order('rating', { ascending: false });
+
+      if (error) throw error;
+
+      setMatchedTechnicians(data || []);
+
+      if (data && data.length > 0) {
+        setBookingStep(2);
+      } else {
+        setError(region === 'us'
+          ? `No technicians found in ${city}. Try a different location.`
+          : `在${city}没有找到技师。请尝试其他地址。`);
+      }
+    } catch (error) {
+      console.error('Error searching technicians:', error);
+      setError(region === 'us' ? 'Failed to search technicians' : '搜索技师失败');
+    } finally {
+      setLoadingTechnicians(false);
     }
   };
 
@@ -306,7 +375,7 @@ const SheFixes = () => {
     setCurrentPage('home');
   };
 
-  // 提交预约
+  // 提交预约 - 第一步：填写信息
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser) {
@@ -324,8 +393,18 @@ const SheFixes = () => {
       return;
     }
 
-    // 继续提交订单
-    await submitBooking();
+    // 第一步：搜索技师
+    if (bookingStep === 1) {
+      await searchTechnicians();
+    }
+    // 第二步：确认预约
+    else if (bookingStep === 2) {
+      if (!selectedTechnician) {
+        setError(region === 'us' ? 'Please select a technician' : '请选择一位技师');
+        return;
+      }
+      await submitBooking();
+    }
   };
 
   // 实际提交订单
@@ -340,6 +419,7 @@ const SheFixes = () => {
         .from('bookings')
         .insert([{
           user_id: currentUser.id,
+          technician_id: selectedTechnician?.id || null,
           service_type: bookingData.service_type,
           service_address: bookingData.service_address,
           description: bookingData.description,
@@ -353,6 +433,8 @@ const SheFixes = () => {
       if (error) throw error;
 
       alert(region === 'us' ? 'Booking submitted successfully!' : '预约提交成功！');
+
+      // 重置表单
       setBookingForm({
         service_type: '',
         service_address: '',
@@ -362,6 +444,10 @@ const SheFixes = () => {
         photo_url: null
       });
       setPendingBooking(null);
+      setBookingStep(1);
+      setMatchedTechnicians([]);
+      setSelectedTechnician(null);
+
       setCurrentPage('dashboard');
       await fetchUserBookings(currentUser.id);
     } catch (error) {
@@ -381,6 +467,21 @@ const SheFixes = () => {
       await submitBooking();
     }
   };
+
+  // 重置预约流程（当用户导航回首页或其他页面时）
+  const resetBookingFlow = () => {
+    setBookingStep(1);
+    setMatchedTechnicians([]);
+    setSelectedTechnician(null);
+    setError('');
+  };
+
+  // 监听页面切换，重置预约流程
+  useEffect(() => {
+    if (currentPage !== 'booking') {
+      resetBookingFlow();
+    }
+  }, [currentPage]);
 
   // 获取聊天消息
   const fetchMessages = async (bookingId) => {
@@ -1142,21 +1243,48 @@ const SheFixes = () => {
       {/* 预约表单页面 */}
       {currentPage === 'booking' && (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 py-16 px-4">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <div className="bg-white rounded-2xl shadow-xl p-8">
-              <h1 className="text-4xl font-bold mb-8 text-center">{c.booking.title}</h1>
+              {/* 步骤指示器 */}
+              <div className="flex items-center justify-center mb-8">
+                <div className="flex items-center gap-4">
+                  <div className={`flex items-center gap-2 ${bookingStep === 1 ? 'text-pink-500' : 'text-gray-400'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${bookingStep === 1 ? 'bg-pink-500 text-white' : 'bg-gray-200'}`}>
+                      1
+                    </div>
+                    <span className="font-semibold">
+                      {region === 'us' ? 'Service Info' : '服务信息'}
+                    </span>
+                  </div>
+                  <div className="w-12 h-0.5 bg-gray-300"></div>
+                  <div className={`flex items-center gap-2 ${bookingStep === 2 ? 'text-pink-500' : 'text-gray-400'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${bookingStep === 2 ? 'bg-pink-500 text-white' : 'bg-gray-200'}`}>
+                      2
+                    </div>
+                    <span className="font-semibold">
+                      {region === 'us' ? 'Select Technician' : '选择技师'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <h1 className="text-4xl font-bold mb-8 text-center">
+                {bookingStep === 1 ? c.booking.title : (region === 'us' ? 'Select a Technician' : '选择技师')}
+              </h1>
 
               {/* 平台说明 */}
-              <div className="mb-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-4">
-                <p className="text-sm text-gray-700">
-                  <span className="font-semibold text-pink-600">
-                    {region === 'us' ? '💝 Community Platform:' : '💝 公益平台：'}
-                  </span>{' '}
-                  {region === 'us'
-                    ? 'After submitting, you will see local technicians with their hourly rates. Prices, time, and details are negotiable. You can communicate on our platform or switch to other platforms.'
-                    : '提交后会显示同城技师及时薪。价格、时间、工具等可双方协商，可在平台沟通或转至其他平台联系。'}
-                </p>
-              </div>
+              {bookingStep === 1 && (
+                <div className="mb-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold text-pink-600">
+                      {region === 'us' ? '💝 Community Platform:' : '💝 公益平台：'}
+                    </span>{' '}
+                    {region === 'us'
+                      ? 'After submitting, you will see local technicians with their hourly rates. Prices, time, and details are negotiable. You can communicate on our platform or switch to other platforms.'
+                      : '提交后会显示同城技师及时薪。价格、时间、工具等可双方协商，可在平台沟通或转至其他平台联系。'}
+                  </p>
+                </div>
+              )}
 
               {error && (
                 <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
@@ -1165,7 +1293,9 @@ const SheFixes = () => {
                 </div>
               )}
 
-              <form onSubmit={handleBookingSubmit} className="space-y-6">
+              {/* 第一步：填写服务信息 */}
+              {bookingStep === 1 && (
+                <form onSubmit={handleBookingSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
                     <Wrench size={18} />
@@ -1258,12 +1388,154 @@ const SheFixes = () => {
 
                 <button
                   type="submit"
-                  disabled={loading}
-                  className={`w-full py-4 rounded-lg font-semibold text-white text-lg ${loading ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'}`}
+                  disabled={loadingTechnicians}
+                  className={`w-full py-4 rounded-lg font-semibold text-white text-lg ${loadingTechnicians ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'}`}
                 >
-                  {loading ? '...' : c.booking.submit}
+                  {loadingTechnicians ? '...' : (region === 'us' ? 'Search Technicians' : '搜索技师')}
                 </button>
               </form>
+              )}
+
+              {/* 第二步：选择技师 */}
+              {bookingStep === 2 && (
+                <div>
+                  {/* 订单信息摘要 */}
+                  <div className="mb-6 bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold mb-2">{region === 'us' ? 'Service Details:' : '服务详情：'}</h3>
+                    <div className="text-sm text-gray-700 space-y-1">
+                      <p><span className="font-medium">{region === 'us' ? 'Service:' : '服务：'}</span> {c.booking.services[bookingForm.service_type]}</p>
+                      <p><span className="font-medium">{region === 'us' ? 'Address:' : '地址：'}</span> {bookingForm.service_address}</p>
+                      <p><span className="font-medium">{region === 'us' ? 'Date:' : '日期：'}</span> {bookingForm.preferred_date} {bookingForm.preferred_time}</p>
+                    </div>
+                    <button
+                      onClick={() => setBookingStep(1)}
+                      className="mt-3 text-pink-500 text-sm hover:underline"
+                    >
+                      {region === 'us' ? '← Edit Service Info' : '← 修改服务信息'}
+                    </button>
+                  </div>
+
+                  {/* 技师列表 */}
+                  <div className="space-y-4 mb-6">
+                    <h3 className="font-bold text-xl">
+                      {region === 'us' ? `Found ${matchedTechnicians.length} Technicians` : `找到 ${matchedTechnicians.length} 位技师`}
+                    </h3>
+
+                    {matchedTechnicians.map((tech) => (
+                      <div
+                        key={tech.id}
+                        onClick={() => setSelectedTechnician(tech)}
+                        className={`border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
+                          selectedTechnician?.id === tech.id
+                            ? 'border-pink-500 bg-pink-50'
+                            : 'border-gray-200 hover:border-pink-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="relative">
+                                <div className="text-4xl">👩‍🔧</div>
+                                {tech.selfie_verified && (
+                                  <div className="absolute -bottom-1 -right-1">
+                                    <VerifiedBadge size="sm" region={region} />
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-lg">{tech.name}</h4>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1">
+                                    <Star className="text-yellow-400 fill-yellow-400" size={16} />
+                                    <span className="font-semibold">{tech.rating}</span>
+                                  </div>
+                                  <span className="text-gray-400">•</span>
+                                  <span className="text-sm text-gray-600">
+                                    {tech.jobs_completed} {region === 'us' ? 'jobs' : '单'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 时薪 */}
+                            <div className="mb-3">
+                              <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                                <DollarSign size={16} />
+                                <span className="font-bold">
+                                  {region === 'us' ? `$${tech.hourly_rate}/hr` : `¥${tech.hourly_rate}/小时`}
+                                </span>
+                                <span className="text-xs text-green-600">
+                                  ({region === 'us' ? 'Negotiable' : '可协商'})
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 服务类别 */}
+                            <div className="mb-2">
+                              <span className="text-sm font-medium text-gray-600">
+                                {region === 'us' ? 'Services: ' : '服务类别：'}
+                              </span>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {tech.service_categories?.slice(0, 4).map((cat) => (
+                                  <span key={cat} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                                    {c.booking.services[cat] || cat}
+                                  </span>
+                                ))}
+                                {tech.service_categories?.length > 4 && (
+                                  <span className="text-xs text-gray-500">
+                                    +{tech.service_categories.length - 4} {region === 'us' ? 'more' : '更多'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 工具 */}
+                            {tech.tools && (
+                              <div className="text-sm text-gray-600">
+                                <span className="font-medium">{region === 'us' ? 'Tools: ' : '工具：'}</span>
+                                {tech.tools}
+                              </div>
+                            )}
+
+                            {/* 个人简介 */}
+                            {tech.bio && (
+                              <div className="mt-3 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                                "{tech.bio}"
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 选中标记 */}
+                          {selectedTechnician?.id === tech.id && (
+                            <div className="ml-4">
+                              <CheckCircle className="text-pink-500" size={32} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 确认预约按钮 */}
+                  <form onSubmit={handleBookingSubmit}>
+                    <button
+                      type="submit"
+                      disabled={loading || !selectedTechnician}
+                      className={`w-full py-4 rounded-lg font-semibold text-white text-lg ${
+                        loading || !selectedTechnician ? 'bg-gray-400' : 'bg-pink-500 hover:bg-pink-600'
+                      }`}
+                    >
+                      {loading ? '...' : (region === 'us' ? 'Confirm Booking' : '确认预约')}
+                    </button>
+                  </form>
+
+                  {!selectedTechnician && (
+                    <p className="text-center text-sm text-gray-500 mt-3">
+                      {region === 'us' ? 'Please select a technician to continue' : '请选择一位技师以继续'}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
