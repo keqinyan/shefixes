@@ -993,13 +993,8 @@ const SheFixes = () => {
           <div className="py-16 px-4 bg-white">
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-4xl font-bold mb-4">
-                {region === 'us' ? 'Ready to get started?' : '准备开始了吗？'}
+                {region === 'us' ? 'Ready to get started?' : '准备好开始了吗？'}
               </h2>
-              <p className="text-xl text-gray-600 mb-8">
-                {region === 'us'
-                  ? 'Join thousands of women who trust SheFixes for their home service needs'
-                  : '加入数千名信赖SheFixes的女性，获得优质的家庭服务'}
-              </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button onClick={() => setCurrentPage('booking')} className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full font-semibold shadow-lg">
                   {region === 'us' ? 'Book a Service' : '预约服务'}
